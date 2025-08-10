@@ -80,19 +80,3 @@ cd ../client
 npm start
 
 ```
-# 📅 Project Progress Tracker
-
-## 📅 Project Progress Tracker
-
-| Day      | Date       | Progress / Tasks Completed |
-|----------|------------|-----------------------------|
-| **Day 1**  | 2025-08-10 | Initialized project, set up folder structure, installed dependencies |
-| **Day 2**  | YYYY-MM-DD | Created backend server setup, added Express routes, connected MongoDB |
-| **Day 3**  | YYYY-MM-DD | Built authentication system (JWT, bcrypt), tested APIs |
-| **Day 4**  | YYYY-MM-DD | Implemented bus search & listing API |
-| **Day 5**  | YYYY-MM-DD | Created frontend React project, set up routing & basic pages |
-| **Day 6**  | YYYY-MM-DD | Integrated frontend with backend APIs |
-| **Day 7**  | YYYY-MM-DD | Developed seat selection UI & booking flow |
-| **Day 8**  | YYYY-MM-DD | Added payment simulation UI with react-credit-cards |
-| **Day 9**  | YYYY-MM-DD | Implemented booking confirmation page |
-| **Day 10** | YYYY-MM-DD | Final testing, bug fixes, and documentation |
