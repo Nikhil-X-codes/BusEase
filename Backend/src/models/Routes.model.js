@@ -1,14 +1,13 @@
 import mongoose, { Schema } from "mongoose";
 
 const RouteSchema = new Schema({
+    
    totalDistance: {
         type: Number,
-        required: true,
         default: 0
    },
    totalDuration: {
         type: Number,
-        required: true,
     },
 
     startLocation: {
@@ -27,4 +26,5 @@ const RouteSchema = new Schema({
     timestamps: true,
 })
 
-export const Route = mongoose.model("Route", RouteSchema);
+ const Route = mongoose.model("Route", RouteSchema);
+ export default Route;

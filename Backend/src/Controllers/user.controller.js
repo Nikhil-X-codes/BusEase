@@ -1,5 +1,6 @@
 import ApiError from "../utils/ApiError.js";
-import ApiResponse from "../utils/Apiresponse.js"; 
+import ApiResponse from "../utils/ApiResponse.js";
+import asynchandler from '../utils/Asynchandler.js'
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
@@ -14,8 +15,7 @@ import { generateOTP,
 const registeruser = asynchandler(async (req,res) => {
 
     const { username, email, password } = req.body;
-    console.log('success')
-    console.log({ username, email, password });
+
     if (!username || !email || !password) {
         return res.status(400).json({ message: "All fields are required" });
     }
@@ -58,7 +58,7 @@ const loginuser = asynchandler(async (req, res) => {
 
     const {accessToken,refreshToken } = await generateAccessAndRefreshTokens(existinguser._id);
 
-    const loggedInUser = await User.findById(existinguser._id).select("-refreshToken");
+    const loggedInUser = await User.findById(existinguser._id).select("-password -refreshToken");
 
     const options = {
         httpOnly: true,
@@ -161,7 +161,6 @@ const updateProfile = asynchandler(async (req, res) => {
     if (username) updateFields.username = username;
     if (email) updateFields.email = email;
 
-    // Check if email already exists (if email is being updated)
     if (email) {
         const existingUser = await User.findOne({ 
             email: email,
@@ -268,20 +267,17 @@ const sendPasswordResetOTP = asynchandler(async (req, res) => {
 
     const otp = generateOTP();
     
-    // Store OTP and expiry time in database
     user.resetPasswordOTP = otp;
     user.resetPasswordOTPExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
     await user.save();
 
     try {
-        // Send OTP via email
         await sendOTPEmail(email, otp);
         
         return res
             .status(200)
             .json(new ApiResponse(200, "Password reset OTP sent to your email"));
     } catch (error) {
-        // Clear OTP data if email fails
         user.resetPasswordOTP = undefined;
         user.resetPasswordOTPExpires = undefined;
         await user.save();

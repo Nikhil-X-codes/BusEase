@@ -24,5 +24,12 @@ app.get('/', (req, res) => {
 });
 
 
+import userRouter from './routes/user.routes.js';
+import BookRouter from './routes/book.routes.js';
+import RouteRouter from './routes/route.routes.js';
+
+app.use('/api/v1/users', userRouter);
+app.use('/api/v1/book', BookRouter);
+app.use('/api/v1/routes', RouteRouter);
 
 export default app;
