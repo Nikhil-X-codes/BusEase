@@ -34,7 +34,13 @@ const userschema=new Schema({
     {
         types:Schema.Types.ObjectId,
     }
-  ]
+  ],
+    resetPasswordOTP: {
+        type: String
+    },
+    resetPasswordOTPExpires: {
+        type: Date
+    }
 
 },{
     timestamps: true,
