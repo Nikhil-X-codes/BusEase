@@ -19,12 +19,12 @@ const ScheduleSchema = new Schema({
     required: true
   },
 
-  boardingTime:{
+  From:{
     type: String,
     required: true
   },
   
-  arrivalTime:{
+  To:{
     type: String,
     required: true
   },

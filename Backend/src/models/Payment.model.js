@@ -8,25 +8,12 @@ const PaymentSchema = new Schema({
         required: true
     },
 
-    Cardetails:{
-          
-        cardNumber: {
-            type: String,
-            required: true,
-        },
-        cardHolderName: {
-            type: String,
-            required: true,
-        },
-        expiryDate: {
-            type: String,
-            required: true,
-        },
-        cvv:{
-            type: String,
-            required: true,
-        }
-    },
+cardDetails: {
+    cardNumber: { type: String, required: true },
+    cardHolderName: { type: String, required: true },
+    expiryDate: { type: String, required: true },
+    cvv: { type: String, required: true }
+},
 
     amount:{
         type: Number,

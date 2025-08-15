@@ -8,14 +8,14 @@
 ## 🚀 Key Features
 
 - **User Authentication** – Sign up & Login with JWT.
-- **Bus Search** – Filter by origin, destination, and date.
+- **Bus Search** – Search by origin, destination, and date.
 - **Bus Listing** – View available buses with details.
 - **Seat Selection** – Interactive visual seat map.
-- **Payment Simulation** – Debit card UI 
+- **Payment Simulation** – Debit card ,Razer pay and other UPI
 - **Booking Confirmation** – Summary of booking with masked card number.
 - **Responsive UI** – Works on desktop and mobile devices.
 - **Form Validation** – Basic input validation for better user experience.
-
+- **Admin** - Dashboard for admin
 ---
 
 ## 🛠 Tech Stack
@@ -32,14 +32,12 @@
 | Package         | Description                           |
 |-----------------|---------------------------------------|
 | `bcrypt`        | Password hashing                      |
-| `cloudinary`    | Cloud storage for video/image assets  |
 | `cookie-parser` | Parses cookies in request headers     |
 | `dotenv`        | Loads environment variables           |
 | `jsonwebtoken`  | JWT-based user authentication         |
 | `mongoose`      | ODM for MongoDB                       |
-| `multer`        | Middleware for file uploads           |
 |  `axios`        | Connects frontend and backend         |
-
+|  `nodemailer`   | Send emails                           |
 
 ## 📁 Project Structure
 
