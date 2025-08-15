@@ -1,14 +1,13 @@
 import { useState } from 'react'
-import './App.css'
+import {AuthProvider} from './context/AuthContext'
 
-function App() {
- 
+const App = () => {
+   return(
+    <AuthProvider>
 
-  return (
-    <>
-  
-    </>
-  )
+      </AuthProvider>
+   )
 }
+
 
 export default App
