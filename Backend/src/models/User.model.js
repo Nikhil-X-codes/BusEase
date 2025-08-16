@@ -1,9 +1,8 @@
 import mongoose, { Schema } from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import Bus from "./Bus.model.js";
 
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "your_access_token_secret";
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || "your_refresh_token_secret";
 
 const userschema=new Schema({
     username: {
@@ -32,7 +31,20 @@ const userschema=new Schema({
   },
   bookingHistory:[
     {
-        types:Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
+        ref: "Bus",
+        seats: [{
+            seatNumber: String,
+            price: Number,
+            type: {
+                type: String,
+                enum: ["Sleeper", "Seater"]
+            }
+        }],
+        bookingDate: {
+            type: Date,
+            default: Date.now
+        }
     }
   ],
     resetPasswordOTP: {

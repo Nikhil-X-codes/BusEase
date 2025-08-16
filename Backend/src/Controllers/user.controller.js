@@ -38,7 +38,6 @@ const registeruser = asynchandler(async (req,res) => {
     return res.status(201).json(new ApiResponse(201, "User registered successfully", newUser));
 })
 
-
 const loginuser = asynchandler(async (req, res) => {                                   
     const { email, password } = req.body;
     if (!email || !password) {
@@ -315,6 +314,93 @@ const resetPasswordWithOTP = asynchandler(async (req, res) => {
 });
 
 
+const BookingHistory = asynchandler(async (req, res) => {
+    const history = await User.aggregate([
+        {
+            $match: { 
+                _id: new mongoose.Types.ObjectId(req.user._id) 
+            }
+        },
+        {
+            $unwind: "$bookingHistory"
+        },
+        {
+            $lookup: {
+                from: "buses",
+                localField: "bookingHistory",
+                foreignField: "_id",
+                as: "busDetails",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "schedules",
+                            localField: "_id",
+                            foreignField: "bus",
+                            as: "scheduleDetails",
+                            pipeline: [
+                                {
+                                    $lookup: {
+                                        from: "routes",
+                                        localField: "route",
+                                        foreignField: "_id",
+                                        as: "routeInfo"
+                                    }
+                                },
+                                {
+                                    $unwind: "$routeInfo"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $unwind: "$scheduleDetails"
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: "$busDetails"
+        },
+        {
+            $project: {
+                _id: 0,
+                busNumber: "$busDetails.busNumber",
+                amenities: "$busDetails.amenities",
+                bookedSeats: "$bookingHistory.seats",
+                bookingDate: "$bookingHistory.bookingDate",
+                startLocation: "$busDetails.scheduleDetails.From",
+                endLocation: "$busDetails.scheduleDetails.To",
+                journeyDate: "$busDetails.scheduleDetails.date",
+                totalDistance: "$busDetails.scheduleDetails.routeInfo.totalDistance",
+                totalDuration: "$busDetails.scheduleDetails.routeInfo.totalDuration",
+                price: {
+                    $reduce: {
+                        input: "$bookingHistory.seats",
+                        initialValue: 0,
+                        in: { $add: ["$$value", "$$this.price"] }
+                    }
+                }
+            }
+        },
+        {
+            $sort: { bookingDate: -1 }
+        }
+    ]);
+
+    if (!history.length) {
+        throw new ApiError(404, "No booking history found");
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(
+            200,
+            "Booking history fetched successfully",
+            history
+        ));
+});
+
+
 
 export {
   registeruser,
@@ -325,7 +411,8 @@ export {
     updateProfile,
     refreshAccessToken,
     sendPasswordResetOTP,
-    resetPasswordWithOTP
+    resetPasswordWithOTP,
+    BookingHistory
 }
 
 
