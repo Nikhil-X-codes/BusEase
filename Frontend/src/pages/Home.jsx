@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Calendar, MapPin, LogOut, Users, Clock, Star, Wifi, Zap, Utensils, Book, Car } from "lucide-react";
+import { Navigate, useNavigate } from "react-router-dom";
 
 export default function Home() {
   const [currentStep, setCurrentStep] = useState(1);
+  const navigate=useNavigate()
   const [searchData, setSearchData] = useState({
     from: "",
     to: "",
@@ -87,9 +89,19 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900">
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Background Image with Blur */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: "url('https://images.unsplash.com/photo-1570125909232-eb263c188f7e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')",
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/85 via-purple-800/75 to-blue-800/85 backdrop-blur-sm" />
+      </div>
+
       {/* Header with Sign Out */}
-      <header className="flex justify-between items-center p-6">
+      <header className="relative z-10 flex justify-between items-center p-6">
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
             <Users className="w-5 h-5 text-white" />
@@ -107,7 +119,7 @@ export default function Home() {
       </header>
 
       {/* Step Navigation */}
-      <div className="flex justify-center mb-8">
+      <div className="relative z-10 flex justify-center mb-8">
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-6 py-2 flex items-center space-x-8">
           {steps.map(({ step, label, icon: Icon, active }) => (
             <div key={step} className="flex items-center space-x-2">
@@ -128,7 +140,7 @@ export default function Home() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-6 pb-8">
+      <div className="relative z-10 max-w-4xl mx-auto px-6 pb-8">
         {/* Search Panel */}
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 mb-8">
           <h2 className="text-2xl font-bold text-white text-center mb-8">Search Your Perfect Journey</h2>
@@ -178,17 +190,17 @@ export default function Home() {
             <div className="space-y-2">
               <label className="text-white text-sm font-medium block">Departure Date</label>
               <div className="relative">
-                  <input
-    type="date"
-    value={searchData.date}
-    onChange={(e) =>
-      setSearchData({ ...searchData, date: e.target.value })
-    }
-    placeholder="dd-mm-yyyy"
-    className="w-full px-4 py-3 pr-12 bg-white/90 border border-white/30 rounded-xl 
-               focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-700
-               [appearance:textfield] [&::-webkit-calendar-picker-indicator]:hidden"
-  />
+                <input
+                  type="date"
+                  value={searchData.date}
+                  onChange={(e) =>
+                    setSearchData({ ...searchData, date: e.target.value })
+                  }
+                  placeholder="dd-mm-yyyy"
+                  className="w-full px-4 py-3 pr-12 bg-white/90 border border-white/30 rounded-xl 
+                            focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-700
+                            [appearance:textfield] [&::-webkit-calendar-picker-indicator]:hidden"
+                />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                   <Calendar className="w-5 h-5 text-gray-400" />
                 </div>
@@ -275,7 +287,10 @@ export default function Home() {
                     <div className="text-white/60 text-sm">{bus.priceText}</div>
                   </div>
                   <button 
-                    onClick={() => handleBookNow(bus.id)}
+                    onClick={() => {
+                      handleBookNow(bus.id);
+                      navigate(`/seat`);
+                    }}
                     className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 active:scale-95"
                   >
                     Book Now
@@ -285,8 +300,6 @@ export default function Home() {
             </div>
           ))}
         </div>
-
-
       </div>
     </div>
   );
