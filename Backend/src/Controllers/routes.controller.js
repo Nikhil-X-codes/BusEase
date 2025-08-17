@@ -1,6 +1,5 @@
 import asyncHandler from '../utils/Asynchandler.js';
 import Route from '../models/Routes.model.js';
-import Bus from '../models/Bus.model.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 

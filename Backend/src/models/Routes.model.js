@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import Bus from "./Bus.model.js";
 
 const RouteSchema = new Schema({
    totalDistance: {
@@ -16,6 +17,7 @@ const RouteSchema = new Schema({
     type: String,
     required: true,
     },
+    bus: { type: Schema.Types.ObjectId, ref: "Bus", required: true}
 },{
     timestamps: true,
 })

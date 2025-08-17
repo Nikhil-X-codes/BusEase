@@ -2,6 +2,7 @@ import asyncHandler from '../utils/Asynchandler.js'
 import Bus from '../models/Bus.model.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import Route from '../models/Routes.model.js';
 
 const createBus = asyncHandler(async (req, res) => {
   const { busNumber, capacity, amenities, Seats } = req.body;
@@ -41,12 +42,10 @@ if (hasDuplicate) {
   }
 });
 
-
 const getBuses = asyncHandler(async (req, res) => {
   const buses = await Bus.find({}).select("-amenities -Seats");
   res.json(new ApiResponse(200, 'Buses retrieved successfully', buses));
 });
-
 
 const getBusById = asyncHandler(async (req, res) => {
   const bus = await Bus.findById(req.params.id);
