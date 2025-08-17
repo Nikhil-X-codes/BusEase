@@ -16,7 +16,7 @@ const SeatSchema = new Schema({
   Type: {
     type: String,
     required: true,
-    enum: ["Sleeper", "Seater"], 
+    enum: ["Sleeper", "Seater"],
   },
   Seating: {
     type: String,
@@ -40,13 +40,12 @@ const BusSchema = new Schema(
     amenities: {
       type: [String],
     },
-    Seats: [SeatSchema], 
+    Seats: [SeatSchema],
   },
   {
     timestamps: true,
   }
 );
-
 
 BusSchema.pre("save", function (next) {
   this.Seats.forEach((seat) => {
@@ -54,6 +53,10 @@ BusSchema.pre("save", function (next) {
       seat.Seating = undefined;
     }
   });
+  
+  // Auto-calculate capacity from seats
+  this.capacity = this.Seats.length;
+  
   next();
 });
 

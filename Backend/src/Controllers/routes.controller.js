@@ -1,5 +1,6 @@
 import asyncHandler from '../utils/Asynchandler.js';
 import Route from '../models/Routes.model.js';
+import Bus from '../models/Bus.model.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 
@@ -34,15 +35,12 @@ const createRoute = asyncHandler(async (req, res) => {
   }
 });
 
+const getroutes = asyncHandler(async (req, res) => {
+  const routes = await Route.find({})
+    .populate("bus", "busNumber capacity amenities Seats") // fetch bus with seats
+    .select("-__v -updatedAt -createdAt"); // optional: remove noise
 
-const getRouteById = asyncHandler(async (req, res) => {
-  const route = await Route.findById(req.params.id).select('-totalDistance');
-
-  if (route) {
-    res.json(new ApiResponse(200, 'Route retrieved successfully', route));
-  } else {
-    throw new ApiError(404, 'Route not found');
-  }
+  res.json(new ApiResponse(200, "Routes retrieved successfully", routes));
 });
 
 const updateRoute = asyncHandler(async (req, res) => {
@@ -92,31 +90,25 @@ const deleteRoute = asyncHandler(async (req, res) => {
   }
 });
 
-
 const searchRoutes = asyncHandler(async (req, res) => {
   const { startLocation, endLocation } = req.query;
 
   let query = {};
-  
-  if (startLocation) {
-    query.startLocation = { $regex: startLocation, $options: 'i' }; 
-  }
-  
-  if (endLocation) {
-    query.endLocation = { $regex: endLocation, $options: 'i' };
-  }
+  if (startLocation) query.startLocation = { $regex: startLocation, $options: "i" };
+  if (endLocation) query.endLocation = { $regex: endLocation, $options: "i" };
 
   if (Object.keys(query).length === 0) {
-    throw new ApiError(400, 'Please provide startLocation or endLocation to search');
+    throw new ApiError(400, "Please provide startLocation or endLocation to search");
   }
 
-  const routes = await Route.find(query).select('-totalDistance');
-  res.json(new ApiResponse(200, 'Routes found', routes));
+  const routes = await Route.find(query)
+
+  res.json(new ApiResponse(200, "Routes found", routes));
 });
 
 export {
   createRoute,
-  getRouteById,
+  getroutes,
   updateRoute,
   deleteRoute,
   searchRoutes
