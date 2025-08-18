@@ -31,13 +31,11 @@ app.get('/', (req, res) => {
 import userRouter from './routes/user.routes.js';
 import BookRouter from './routes/book.routes.js';
 import RouteRouter from './routes/route.routes.js';
-import ScheduleRouter from './routes/Schedule.routes.js';
 import PaymentRouter from './routes/Payment.routes.js';
 
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/book', BookRouter);
 app.use('/api/v1/routes', RouteRouter);
-app.use('/api/v1/schedules', ScheduleRouter);
 app.use('/api/v1/payments', PaymentRouter);
 
 export default app;

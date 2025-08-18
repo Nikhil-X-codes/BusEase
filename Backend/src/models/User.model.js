@@ -1,7 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import Bus from "./Bus.model.js";
 
 
 const userschema=new Schema({
@@ -27,7 +26,7 @@ const userschema=new Schema({
   },
   gender:{
     type: String,
-    enum: ['male','female','other']
+    enum: ['male','female']
   },
   bookingHistory:[
     {

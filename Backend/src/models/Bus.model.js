@@ -41,6 +41,16 @@ const BusSchema = new Schema(
       type: [String],
     },
     Seats: [SeatSchema],
+    startLocation: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: "Route",
+    },
+    endLocation: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: "Route",
+    },
   },
   {
     timestamps: true,
@@ -53,10 +63,7 @@ BusSchema.pre("save", function (next) {
       seat.Seating = undefined;
     }
   });
-  
-  // Auto-calculate capacity from seats
   this.capacity = this.Seats.length;
-  
   next();
 });
 

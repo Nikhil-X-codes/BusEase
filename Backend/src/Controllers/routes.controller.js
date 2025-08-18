@@ -5,110 +5,186 @@ import ApiResponse from '../utils/ApiResponse.js';
 
 
 const createRoute = asyncHandler(async (req, res) => {
-  const { startLocation, endLocation } = req.body;
+  const { startLocation, endLocation, date, totalDistance = 0, totalDuration = 0 } = req.body;
 
-  if (!startLocation || !endLocation) {
-    throw new ApiError(400, 'Start location and end location are required');
+  if (!startLocation || !endLocation || !date) {
+    throw new ApiError(400, "Start location, end location, and date are required");
   }
 
-  const routeExists = await Route.findOne({ startLocation, endLocation });
+  // Case-insensitive check for existing route
+  const routeExists = await Route.findOne({
+    startLocation: { $regex: `^${startLocation}$`, $options: "i" },
+    endLocation: { $regex: `^${endLocation}$`, $options: "i" },
+    date: new Date(date),
+  });
+
   if (routeExists) {
-    throw new ApiError(400, 'Route with this start and end location already exists');
+    throw new ApiError(400, "Route with this start, end location, and date already exists");
   }
 
   const route = await Route.create({
     startLocation,
-    endLocation
+    endLocation,
+    date: new Date(date),
+    totalDistance: Number(totalDistance),
+    totalDuration: Number(totalDuration),
+    buses: [], // Initialize empty buses array
   });
 
   if (route) {
     res.status(201).json(
-      new ApiResponse(201, 'Route created successfully', {
+      new ApiResponse(201, "Route created successfully", {
         _id: route._id,
         startLocation: route.startLocation,
-        endLocation: route.endLocation
+        endLocation: route.endLocation,
+        date: route.date,
+        totalDistance: route.totalDistance,
+        totalDuration: route.totalDuration,
+        buses: route.buses,
       })
     );
   } else {
-    throw new ApiError(400, 'Invalid route data');
+    throw new ApiError(400, "Invalid route data");
   }
 });
 
 const getroutes = asyncHandler(async (req, res) => {
   const routes = await Route.find({})
-    .populate("bus", "busNumber capacity amenities Seats") // fetch bus with seats
-    .select("-__v -updatedAt -createdAt"); // optional: remove noise
+    .populate({
+      path: "buses",
+      select: "busNumber capacity amenities startLocation endLocation",
+    })
+    .select("startLocation endLocation date totalDistance totalDuration buses")
+    .lean();
 
   res.json(new ApiResponse(200, "Routes retrieved successfully", routes));
 });
 
 const updateRoute = asyncHandler(async (req, res) => {
-  const route = await Route.findById(req.params.id);
+  const { startLocation, endLocation, date, totalDistance, totalDuration } = req.body;
+  const routeId = req.params.id;
 
-  if (route) {
-    if (req.body.startLocation || req.body.endLocation) {
-      const newStart = req.body.startLocation || route.startLocation;
-      const newEnd = req.body.endLocation || route.endLocation;
-      
-      const duplicateRoute = await Route.findOne({ 
-        startLocation: newStart, 
-        endLocation: newEnd,
-        _id: { $ne: route._id } 
-      });
-      
-      if (duplicateRoute) {
-        throw new ApiError(400, 'Route with this start and end location already exists');
-      }
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const route = await Route.findById(routeId).session(session);
+    if (!route) {
+      throw new ApiError(404, "Route not found");
     }
 
-    route.startLocation = req.body.startLocation || route.startLocation;
-    route.endLocation = req.body.endLocation || route.endLocation;
+    if (startLocation || endLocation || date) {
+      const newStart = startLocation || route.startLocation;
+      const newEnd = endLocation || route.endLocation;
+      const newDate = date ? new Date(date) : route.date;
 
-    const updatedRoute = await route.save();
+      const duplicateRoute = await Route.findOne(
+        {
+          startLocation: { $regex: `^${newStart}$`, $options: "i" },
+          endLocation: { $regex: `^${newEnd}$`, $options: "i" },
+          date: newDate,
+          _id: { $ne: route._id },
+        },
+        null,
+        { session }
+      );
+
+      if (duplicateRoute) {
+        throw new ApiError(400, "Route with this start, end location, and date already exists");
+      }
+
+      route.startLocation = newStart;
+      route.endLocation = newEnd;
+      route.date = newDate;
+    }
+
+    if (totalDistance !== undefined) route.totalDistance = Number(totalDistance);
+    if (totalDuration !== undefined) route.totalDuration = Number(totalDuration);
+
+    const updatedRoute = await route.save({ session });
+
+    await session.commitTransaction();
+
     res.json(
-      new ApiResponse(200, 'Route updated successfully', {
+      new ApiResponse(200, "Route updated successfully", {
         _id: updatedRoute._id,
         startLocation: updatedRoute.startLocation,
-        endLocation: updatedRoute.endLocation
+        endLocation: updatedRoute.endLocation,
+        date: updatedRoute.date,
+        totalDistance: updatedRoute.totalDistance,
+        totalDuration: updatedRoute.totalDuration,
+        buses: updatedRoute.buses,
       })
     );
-  } else {
-    throw new ApiError(404, 'Route not found');
+  } catch (error) {
+    await session.abortTransaction();
+    throw new ApiError(error.statusCode || 500, error.message || "Error updating route");
+  } finally {
+    session.endSession();
   }
 });
-
 
 const deleteRoute = asyncHandler(async (req, res) => {
-  const route = await Route.findById(req.params.id);
+  const routeId = req.params.id;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  if (route) {
-    await Route.findByIdAndDelete(req.params.id);
-    res.json(new ApiResponse(200, 'Route removed successfully'));
-  } else {
-    throw new ApiError(404, 'Route not found');
+  try {
+    const route = await Route.findById(routeId).session(session);
+    if (!route) {
+      throw new ApiError(404, "Route not found");
+    }
+
+    // Check if any buses reference this route
+    const buses = await Bus.find({
+      $or: [{ startLocation: routeId }, { endLocation: routeId }],
+    }).session(session);
+
+    if (buses.length > 0) {
+      throw new ApiError(400, "Cannot delete route as it is referenced by one or more buses");
+    }
+
+    await Route.findByIdAndDelete(routeId).session(session);
+    await session.commitTransaction();
+
+    res.json(new ApiResponse(200, "Route removed successfully", { _id: routeId }));
+  } catch (error) {
+    await session.abortTransaction();
+    throw new ApiError(error.statusCode || 500, error.message || "Error deleting route");
+  } finally {
+    session.endSession();
   }
 });
 
+
 const searchRoutes = asyncHandler(async (req, res) => {
-  const { startLocation, endLocation } = req.query;
+  const { startLocation, endLocation, date } = req.query;
 
   let query = {};
-  if (startLocation) query.startLocation = { $regex: startLocation, $options: "i" };
-  if (endLocation) query.endLocation = { $regex: endLocation, $options: "i" };
+  if (startLocation) query.startLocation = { $regex: `^${startLocation}$`, $options: "i" };
+  if (endLocation) query.endLocation = { $regex: `^${endLocation}$`, $options: "i" };
+  if (date) query.date = new Date(date);
 
   if (Object.keys(query).length === 0) {
-    throw new ApiError(400, "Please provide startLocation or endLocation to search");
+    throw new ApiError(400, "Please provide startLocation, endLocation, or date to search");
   }
 
   const routes = await Route.find(query)
+    .populate({
+      path: "buses",
+      select: "busNumber capacity amenities startLocation endLocation",
+    })
+    .select("startLocation endLocation date totalDistance totalDuration buses")
+    .lean();
 
   res.json(new ApiResponse(200, "Routes found", routes));
 });
+
 
 export {
   createRoute,
   getroutes,
   updateRoute,
   deleteRoute,
-  searchRoutes
+  searchRoutes,
 };
