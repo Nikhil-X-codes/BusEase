@@ -6,6 +6,8 @@ import Home from './pages/Home';
 import SeatSelection from './pages/Seatselection';
 import Payment from './pages/payment';
 import PaymentSuccess from './pages/paymentsuccess';
+import Profile from './pages/Profile';
+import WatchHistory from './pages/WatchHistory';
 
 const App = () => {
   return (
@@ -22,9 +24,19 @@ const App = () => {
               <Home/>
           } />
 
-          <Route path='/seat'
+          <Route path='/buses/:busId/seats'
           element = {
               <SeatSelection/>
+          } />
+
+          <Route path='/profile'
+          element = {
+              <Profile/>
+          } />
+
+          <Route path='/history'
+          element = {
+              <WatchHistory/>
           } />
                     
                     

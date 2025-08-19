@@ -11,8 +11,8 @@ import{
 const PaymentRouter = Router();
 
 PaymentRouter.post('/create', verifyJWT, createPayment);
-PaymentRouter.get('/all', getPayments);
-PaymentRouter.get('/:id', getPaymentById);
+PaymentRouter.get('/all', verifyJWT, getPayments);
+PaymentRouter.get('/:id', verifyJWT, getPaymentById);
 PaymentRouter.put('/update/:id', verifyJWT, updatePayment);
 
 export default PaymentRouter;

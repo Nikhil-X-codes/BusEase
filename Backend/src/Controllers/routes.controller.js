@@ -172,13 +172,14 @@ const searchRoutes = asyncHandler(async (req, res) => {
   const routes = await Route.find(query)
     .populate({
       path: "buses",
-      select: "busNumber capacity amenities startLocation endLocation",
+      select: "busNumber capacity amenities Seats startLocation endLocation",
     })
     .select("startLocation endLocation date totalDistance totalDuration buses")
     .lean();
 
   res.json(new ApiResponse(200, "Routes found", routes));
 });
+
 
 
 export {

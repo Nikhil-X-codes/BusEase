@@ -4,22 +4,20 @@ import { Link } from "react-router-dom";
 
 export default function PaymentSuccess() {
   const [showSuccess, setShowSuccess] = useState(false);
-
-  // Sample booking data (would come from previous steps/state)
   const bookingData = {
     busName: "Unique Travels",
     bookingId: "BG" + Math.random().toString(36).substr(2, 8).toUpperCase(),
-    date: "Dec 25, 2024",
+    date: new Date().toDateString(),
     from: "Mumbai",
     to: "Delhi",
     departureTime: "22:00",
     arrivalTime: "14:00",
     passengers: [
-      { name: "John Doe", seat: "A1", gender: "Male", type: "Sleeper" },
-      { name: "Jane Doe", seat: "A2", gender: "Female", type: "Sleeper" }
+      { name: "Rakesh", seat: "A1", gender: "Male", type: "Sleeper" },
+      { name: "Suhani", seat: "2B", gender: "Female", type: "Seater" },
     ],
     totalAmount: 2640,
-    paymentId: "PAY" + Math.random().toString(36).substr(2, 10).toUpperCase()
+    paymentId: "PAY" + Math.random().toString(36).substr(2, 10).toUpperCase(),
   };
 
   useEffect(() => {
