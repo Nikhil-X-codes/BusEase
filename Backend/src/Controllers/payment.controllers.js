@@ -8,11 +8,13 @@ import ApiResponse from '../utils/ApiResponse.js';
 
 const createPayment = asyncHandler(async (req, res) => {
   const { busId, seatNumbers = [], cardDetails } = req.body;
-  const userId = req.user?._id;
+  const userId = req.user?._id; 
 
-  if (!userId) throw new ApiError(401, 'Unauthorized');
-  const userExists = await User.findById(userId);
-  if (!userExists) throw new ApiError(404, 'User not found');
+  let userExists = null;
+  if (userId) {
+    userExists = await User.findById(userId);
+    if (!userExists) throw new ApiError(404, 'User not found');
+  }
 
   if (!busId || !Array.isArray(seatNumbers) || seatNumbers.length === 0) {
     throw new ApiError(400, 'busId and seatNumbers are required');
@@ -26,6 +28,9 @@ const createPayment = asyncHandler(async (req, res) => {
   }
   if (!cardDetails?.cvv?.match(/^\d{3,4}$/)) {
     throw new ApiError(400, 'Invalid CVV. Must be 3 or 4 digits.');
+  }
+  if (!cardDetails?.cardHolderName?.trim()) {
+    throw new ApiError(400, 'Cardholder name is required');
   }
 
   const bus = await Bus.findById(busId).populate({
@@ -52,7 +57,6 @@ const createPayment = asyncHandler(async (req, res) => {
   const gstAmount = Math.round((subtotal + serviceFee + convenienceFee) * 0.12);
   const total = subtotal + serviceFee + convenienceFee + gstAmount;
 
-  // Mark seats as booked
   bus.Seats.forEach((s) => {
     if (seatNumbers.includes(s.SeatNumber)) {
       s.isAvailable = false;
@@ -61,7 +65,7 @@ const createPayment = asyncHandler(async (req, res) => {
   await bus.save();
 
   const payment = await Payment.create({
-    user: userId,
+    user: userId || null, 
     bus: bus._id,
     seats: seatsToBook,
     startLocation: bus.startLocation?.startLocation,
@@ -75,13 +79,10 @@ const createPayment = asyncHandler(async (req, res) => {
     },
   });
 
-  const populatedPayment = await Payment.findById(payment._id)
-    .populate('user', 'name email')
-    .populate('bus', 'busNumber');
+  const populatedPayment = await Payment.findById(payment._id).populate('bus', 'busNumber');
 
   res.status(201).json(new ApiResponse(201, 'Payment created successfully', populatedPayment));
 });
-
 
 const getPayments = asyncHandler(async (req, res) => {
   const userId = req.user?._id;
@@ -104,56 +105,9 @@ const getPaymentById = asyncHandler(async (req, res) => {
 });
 
 
-const updatePayment = asyncHandler(async (req, res) => {
-  const payment = await Payment.findById(req.params.id);
-
-  if (payment) {
-    if (req.body.user) {
-      const userExists = await User.findById(req.body.user);
-      if (!userExists) {
-        throw new ApiError(404, 'User not found');
-      }
-    }
-
-    if (req.body.cardDetails) {
-      if (req.body.cardDetails.cardNumber && !req.body.cardDetails.cardNumber.match(/^\d{16}$/)) {
-        throw new ApiError(400, 'Invalid card number. Must be 16 digits.');
-      }
-      if (req.body.cardDetails.expiryDate && !req.body.cardDetails.expiryDate.match(/^(0[1-9]|1[0-2])\/\d{2}$/)) {
-        throw new ApiError(400, 'Invalid expiry date. Use MM/YY format.');
-      }
-      if (req.body.cardDetails.cvv && !req.body.cardDetails.cvv.match(/^\d{3,4}$/)) {
-        throw new ApiError(400, 'Invalid CVV. Must be 3 or 4 digits.');
-      }
-    }
-
-    payment.user = req.body.user || payment.user;
-    payment.cardDetails = {
-      cardNumber: req.body.cardDetails?.cardNumber || payment.cardDetails.cardNumber,
-      cardHolderName: req.body.cardDetails?.cardHolderName || payment.cardDetails.cardHolderName,
-      expiryDate: req.body.cardDetails?.expiryDate || payment.cardDetails.expiryDate,
-      cvv: req.body.cardDetails?.cvv || payment.cardDetails.cvv
-    };
-    payment.amount = req.body.amount || payment.amount;
-
-    const updatedPayment = await payment.save();
-
-    const populatedPayment = await Payment.findById(updatedPayment._id)
-      .populate('user', 'name email');
-
-    res.json(
-      new ApiResponse(200, 'Payment updated successfully', populatedPayment)
-    );
-  } else {
-    throw new ApiError(404, 'Payment not found');
-  }
-});
-
-
 
 export {
   createPayment,
   getPayments,
   getPaymentById,
-  updatePayment,
 };

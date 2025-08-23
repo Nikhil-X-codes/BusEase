@@ -21,7 +21,6 @@ export default function SeatSelection() {
         const data = resp?.data?.data;
         setBus(data || null);
       } catch (e) {
-        // handle if needed
       } finally {
         setLoading(false);
       }
@@ -96,16 +95,16 @@ export default function SeatSelection() {
   };
 
   const getSeatColor = (status, type) => {
-    const baseStyles = type === "sleeper" ? "h-16 w-8" : "h-8 w-8";
+    const baseStyles = type === "sleeper" ? "h-10 w-20" : "h-10 w-10";
     switch (status) {
       case "available":
-        return `${baseStyles} bg-green-500 hover:bg-green-400 hover:scale-110`;
+        return `${baseStyles} bg-green-500 hover:bg-green-400 hover:scale-105 border border-green-400/50`;
       case "booked":
-        return `${baseStyles} bg-red-500 cursor-not-allowed`;
+        return `${baseStyles} bg-red-500/50 cursor-not-allowed border border-red-400/50`;
       case "selected":
-        return `${baseStyles} bg-yellow-500 hover:bg-yellow-400`;
+        return `${baseStyles} bg-yellow-500 hover:bg-yellow-400 border border-yellow-400/50`;
       default:
-        return `${baseStyles} bg-gray-500`;
+        return `${baseStyles} bg-gray-500/50 border border-gray-400/50`;
     }
   };
 
@@ -113,33 +112,35 @@ export default function SeatSelection() {
     const leftSeats = rowSeats.filter((s) => s.position === "left");
     const rightSeats = rowSeats.filter((s) => s.position === "right");
     return (
-      <div key={rowSeats[0].row} className="flex items-center justify-center gap-8 mb-2">
-        <div className="flex gap-1">
+      <div key={rowSeats[0].row} className="flex items-center justify-center gap-12 mb-4">
+        <div className="flex gap-2">
           {leftSeats.map((seat) => (
             <button
               key={seat.id}
               onClick={() => handleSeatClick(seat)}
-              className={`rounded text-white text-xs font-medium transition-all duration-200 ${getSeatColor(
+              className={`rounded-lg text-white text-sm font-medium transition-all duration-200 flex items-center justify-center ${getSeatColor(
                 seat.status,
                 seat.type
               )}`}
               disabled={seat.status === "booked"}
+              title={`Seat ${seat.label}`}
             >
               {seat.label}
             </button>
           ))}
         </div>
-        <div className="w-6"></div>
-        <div className="flex gap-1">
+        <div className="w-8"></div>
+        <div className="flex gap-2">
           {rightSeats.map((seat) => (
             <button
               key={seat.id}
               onClick={() => handleSeatClick(seat)}
-              className={`rounded text-white text-xs font-medium transition-all duration-200 ${getSeatColor(
+              className={`rounded-lg text-white text-sm font-medium transition-all duration-200 flex items-center justify-center ${getSeatColor(
                 seat.status,
                 seat.type
               )}`}
               disabled={seat.status === "booked"}
+              title={`Seat ${seat.label}`}
             >
               {seat.label}
             </button>
@@ -160,85 +161,81 @@ export default function SeatSelection() {
   const sleeperSeats = seats.filter((s) => s.type === "sleeper");
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage:
-            "url('https://images.unsplash.com/photo-1570125909232-eb263c188f7e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')",
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/85 via-purple-800/75 to-blue-800/85 backdrop-blur-sm" />
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 p-4 md:p-8 relative overflow-hidden">
+      {/* Background Overlay */}
+      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1570125909232-eb263c188f7e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center opacity-20" />
 
-      <header className="relative z-10 flex items-center justify-between p-6">
+      {/* Header */}
+      <header className="relative z-10 flex items-center justify-between mb-8">
         <button
           onClick={() => navigate('/home')}
-          className="flex items-center space-x-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-4 py-2 text-white hover:bg-white/30 transition-all duration-200"
+          className="flex items-center space-x-2 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full px-5 py-2 text-white hover:bg-white/30 transition-all duration-300"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium">Back to Search</span>
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm font-semibold">Back to Search</span>
         </button>
-
-        <div className="flex items-center space-x-2">
-          <h1 className="text-2xl font-bold text-white">BusEase</h1>
-        </div>
-
-        <div className="bg-blue-500/20 text-blue-100 px-4 py-2 rounded-full">
-          <span className="text-sm font-medium">Select Seats</span>
+        <h1 className="text-3xl font-extrabold text-white tracking-tight">BusEase</h1>
+        <div className="bg-indigo-600 text-white px-5 py-2 rounded-full shadow-md">
+          <span className="text-sm font-semibold">Select Seats</span>
         </div>
       </header>
 
-      <div className="relative z-10 flex justify-center mb-8">
-        <div className="bg-white/20 backdrop-blur-md border border-white/30 rounded-full p-2 flex space-x-2">
-          <div className="flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-300 text-white/80">
-            <Users className="w-4 h-4" />
-            <span className="text-sm font-medium">Select Bus</span>
+      {/* Navigation Tabs */}
+      <div className="relative z-10 flex justify-center mb-10">
+        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-full p-3 flex space-x-4">
+          <div className="flex items-center space-x-3 px-5 py-2 rounded-full text-white/70 hover:bg-white/10 transition-all duration-300">
+            <Users className="w-5 h-5" />
+            <span className="text-sm font-semibold">Select Bus</span>
           </div>
-          <div className="flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-300 bg-white text-purple-600 shadow-lg">
-            <Users className="w-4 h-4" />
-            <span className="text-sm font-medium">Select Seat</span>
+          <div className="flex items-center space-x-3 px-5 py-2 rounded-full bg-indigo-600 text-white shadow-md transition-all duration-300">
+            <Users className="w-5 h-5" />
+            <span className="text-sm font-semibold">Select Seat</span>
           </div>
-          <div className="flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-300 text-white/80">
-            <Users className="w-4 h-4" />
-            <span className="text-sm font-medium">Payment</span>
+          <div className="flex items-center space-x-3 px-5 py-2 rounded-full text-white/70 hover:bg-white/10 transition-all duration-300">
+            <Users className="w-5 h-5" />
+            <span className="text-sm font-semibold">Payment</span>
           </div>
         </div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 pb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl">
-            <h2 className="text-2xl font-bold text-white mb-6 text-center">Select Your Seats</h2>
+      {/* Main Content */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 pb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+          {/* Seat Selection Section */}
+          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 md:p-8 shadow-xl">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-6 text-center">Select Your Seats</h2>
 
+            {/* Seat Status Legend */}
             <div className="flex justify-center gap-6 mb-6">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-green-500 rounded"></div>
-                <span className="text-white text-sm">Available</span>
+                <div className="w-5 h-5 bg-green-500 rounded-lg"></div>
+                <span className="text-white text-sm font-medium">Available</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-red-500 rounded"></div>
-                <span className="text-white text-sm">Booked</span>
+                <div className="w-5 h-5 bg-red-500/50 rounded-lg"></div>
+                <span className="text-white text-sm font-medium">Booked</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                <span className="text-white text-sm">Selected</span>
+                <div className="w-5 h-5 bg-yellow-500 rounded-lg"></div>
+                <span className="text-white text-sm font-medium">Selected</span>
               </div>
             </div>
 
+            {/* Driver Indicator */}
             <div className="mb-6">
-              <div className="bg-gray-600 text-white text-center py-2 rounded-t-xl text-sm font-medium">Driver</div>
+              <div className="bg-gray-600 text-white text-center py-2 rounded-lg text-sm font-medium">Driver</div>
             </div>
 
+            {/* Sleeper Seats */}
             <div className="mb-6">
-              <h3 className="text-white font-medium mb-3 text-center">Sleeper Seats</h3>
-              <div className="bg-white/10 p-4 rounded-xl">
+              <h3 className="text-white font-semibold mb-3 text-center">Sleeper Seats</h3>
+              <div className="bg-white/10 p-4 rounded-lg">
                 <div className="flex justify-center gap-2 flex-wrap">
                   {sleeperSeats.map((seat) => (
                     <button
                       key={seat.id}
                       onClick={() => handleSeatClick(seat)}
-                      className={`rounded text-white text-xs font-medium transition-all duration-200 flex items-center justify-center ${getSeatColor(
+                      className={`rounded-lg text-white text-sm font-medium transition-all duration-200 flex items-center justify-center ${getSeatColor(
                         seat.status,
                         seat.type
                       )}`}
@@ -252,30 +249,33 @@ export default function SeatSelection() {
               </div>
             </div>
 
+            {/* Seater Seats */}
             <div>
-              <h3 className="text-white font-medium mb-3 text-center">Seater Seats</h3>
-              <div className="bg-white/10 p-6 rounded-xl">
+              <h3 className="text-white font-semibold mb-3 text-center">Seater Seats</h3>
+              <div className="bg-white/10 p-6 rounded-lg">
                 {Object.keys(seaterSeatsByRow).map((rowNum) => renderSeaterRow(seaterSeatsByRow[parseInt(rowNum)]))}
               </div>
             </div>
 
+            {/* Selected Seats Count */}
             <div className="mt-4 text-center">
-              <span className="text-white/70 text-sm">{selectedSeats.length} seats selected</span>
+              <span className="text-white/70 text-sm font-medium">{selectedSeats.length} seats selected</span>
             </div>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl">
-            <h2 className="text-2xl font-bold text-white mb-6">Passenger Details</h2>
+          {/* Passenger Details Section */}
+          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 md:p-8 shadow-xl">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">Passenger Details</h2>
 
             {selectedSeats.length === 0 ? (
               <div className="text-center py-12">
                 <Users className="w-16 h-16 text-white/40 mx-auto mb-4" />
-                <p className="text-white/60">Please select seats to enter passenger details</p>
+                <p className="text-white/60 text-lg">Please select seats to enter passenger details</p>
               </div>
             ) : (
               <div className="space-y-6">
                 {selectedSeats.map((seat) => (
-                  <div key={seat.id} className="bg-white/10 p-6 rounded-xl border border-white/20 relative">
+                  <div key={seat.id} className="bg-white/10 p-6 rounded-lg border border-white/20 relative">
                     <button
                       onClick={() => handleDeleteSeat(seat.id)}
                       className="absolute top-3 right-3 w-8 h-8 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
@@ -285,10 +285,10 @@ export default function SeatSelection() {
                     </button>
 
                     <div className="mb-4 flex items-center justify-between pr-10">
-                      <span className="bg-yellow-500 text-black px-3 py-1 rounded-full text-sm font-medium">Seat No: {seat.label}</span>
+                      <span className="bg-yellow-500 text-black px-3 py-1 rounded-full text-sm font-semibold">Seat: {seat.label}</span>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          seat.type === "sleeper" ? "bg-purple-500/30 text-purple-100" : "bg-blue-500/30 text-blue-100"
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          seat.type === "sleeper" ? "bg-indigo-500/30 text-indigo-200" : "bg-blue-500/30 text-blue-200"
                         }`}
                       >
                         {seat.type === "sleeper" ? "Sleeper" : "Seater"}
@@ -299,21 +299,21 @@ export default function SeatSelection() {
                       <label className="text-white text-sm font-medium mb-2 block">Passenger Name</label>
                       <input
                         type="text"
-                        placeholder="Enter Name"
+                        placeholder="Enter passenger name"
                         value={seat.passengerName}
                         onChange={(e) => updatePassengerInfo(seat.id, "passengerName", e.target.value)}
-                        className="w-full px-4 py-3 bg-white/90 border border-white/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200"
+                        className="w-full px-4 py-3 bg-white/90 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
                       />
                     </div>
 
                     <div>
                       <label className="text-white text-sm font-medium mb-3 block">Gender</label>
-                      <div className="flex bg-white/20 rounded-xl p-1">
+                      <div className="flex bg-white/10 rounded-lg p-1">
                         <button
                           type="button"
                           onClick={() => updatePassengerInfo(seat.id, "gender", "male")}
                           className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            seat.gender === "male" ? "bg-white text-purple-600 shadow-sm" : "text-white/80 hover:text-white"
+                            seat.gender === "male" ? "bg-white text-indigo-600 shadow-sm" : "text-white/80 hover:text-white"
                           }`}
                         >
                           Male
@@ -322,7 +322,7 @@ export default function SeatSelection() {
                           type="button"
                           onClick={() => updatePassengerInfo(seat.id, "gender", "female")}
                           className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            seat.gender === "female" ? "bg-white text-purple-600 shadow-sm" : "text-white/80 hover:text-white"
+                            seat.gender === "female" ? "bg-white text-indigo-600 shadow-sm" : "text-white/80 hover:text-white"
                           }`}
                         >
                           Female
@@ -334,7 +334,7 @@ export default function SeatSelection() {
 
                 <button
                   onClick={handleConfirmDetails}
-                  className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 active:scale-95 flex items-center justify-center space-x-2"
+                  className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 px-6 rounded-lg font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 active:scale-95 flex items-center justify-center space-x-2"
                 >
                   <Users className="w-5 h-5" />
                   <span>Confirm Details ({selectedSeats.length} passengers)</span>

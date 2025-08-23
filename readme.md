@@ -12,10 +12,10 @@
 - **Bus Listing** – View available buses with details.
 - **Seat Selection** – Interactive visual seat map.
 - **Payment Simulation** – Debit card ,Razer pay and other UPI
-- **Booking Confirmation** – Summary of booking with masked card number.
+- **Booking Confirmation** – Summary of booking with Booking Id and also Download Ticket.
 - **Responsive UI** – Works on desktop and mobile devices.
 - **Form Validation** – Basic input validation for better user experience.
-- **Admin** - Dashboard for admin
+- **Booking History** – Users can View Previous Booking.
 ---
 
 ## 🛠 Tech Stack

@@ -4,7 +4,8 @@ import Select from "react-select";
 import "react-datepicker/dist/react-datepicker.css";
 import { searchRoute, getRoutes } from "../services/route.service";
 import { useNavigate } from "react-router-dom";
-// Profile and History now have their own routes
+import { Bus, Armchair,Coins ,Calendar } from "lucide-react";
+import Header from "../components/Header"
 
 const Home = () => {
   const [from, setFrom] = useState(null);
@@ -14,10 +15,10 @@ const Home = () => {
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch routes for autocomplete
+
+
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
@@ -43,7 +44,6 @@ const Home = () => {
     fetchRoutes();
   }, []);
 
-  // Handle search form submission
   const handleSearch = async (e) => {
     e.preventDefault();
     console.log("Form submitted with:", { from, to, departureDate });
@@ -55,11 +55,9 @@ const Home = () => {
     setLoading(true);
     setError(null);
     try {
-      // Query backend: send only locations to ensure buses on the route are shown
       const response = await searchRoute({
         startLocation: from.value,
         endLocation: to.value,
-        // date: departureDate?.toISOString(), // optional, backend matches exact Date
       });
       const apiData = response?.data?.data;
       console.log("Bus search result raw:", response);
@@ -68,30 +66,30 @@ const Home = () => {
         ? routesArray.flatMap((route) =>
             Array.isArray(route.buses)
               ? route.buses.map((bus) => ({
-                  id: bus._id || '',
-                  name: bus.busNumber || 'Unknown Bus',
+                  id: bus._id || "",
+                  name: bus.busNumber || "Unknown Bus",
                   distance: `${route.totalDistance || 0} km`,
-                  from: route.startLocation || 'Unknown',
-                  to: route.endLocation || 'Unknown',
+                  from: route.startLocation || "Unknown",
+                  to: route.endLocation || "Unknown",
                   departure: route.date
                     ? new Date(route.date).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })
-                    : 'N/A',
+                    : "N/A",
                   arrival: route.date && route.totalDuration
                     ? new Date(
                         new Date(route.date).getTime() + route.totalDuration * 60 * 1000
                       ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                    : 'N/A',
+                    : "N/A",
                   duration: route.totalDuration
                     ? `${Math.floor(route.totalDuration / 60)}h ${route.totalDuration % 60}m`
-                    : 'N/A',
+                    : "N/A",
                   price: bus.Seats && Array.isArray(bus.Seats) && bus.Seats.length > 0
                     ? bus.Seats[0].price || 0
                     : 0,
                   amenities: Array.isArray(bus.amenities) ? bus.amenities : [],
-                  routeId: route._id || '',
+                  routeId: route._id || "",
                 }))
               : []
           )
@@ -109,187 +107,229 @@ const Home = () => {
     }
   };
 
-  // Handle Book Now click
   const handleBookNow = (busId, routeId) => {
     console.log("Navigating to seat selection for bus:", busId, "route:", routeId);
     navigate(`/buses/${busId}/seats?routeId=${routeId}`);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-blue-900 p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 p-4 md:p-8 relative overflow-hidden">
       {/* Background Overlay */}
-      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1570125909232-eb263c188f7e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center opacity-30" />
+      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1570125909232-eb263c188f7e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center opacity-20" />
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between mb-6">
-        <h1 className="text-white text-2xl font-extrabold tracking-wide">BusEase</h1>
-        <div className="relative">
-          <button
-            aria-label="User menu"
-            onClick={() => setMenuOpen((v) => !v)}
-            className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center hover:bg-white/30 transition"
-          >
-            {/* Triangle avatar-style icon */}
-            <span
-              className="w-0 h-0 border-l-6 border-l-transparent border-r-6 border-r-transparent border-t-8 border-t-white"
-              style={{ borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 8 }}
-            />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white/95 rounded-lg shadow-xl overflow-hidden">
-              <button
-                onClick={() => { navigate('/profile'); setMenuOpen(false); }}
-                className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100"
-              >
-                Profile
-              </button>
-              <button
-                onClick={() => { navigate('/history'); setMenuOpen(false); }}
-                className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100"
-              >
-                Booking History
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
+      <Header />
 
       {/* Navigation Tabs */}
-      <div className="flex justify-center space-x-4 mb-6 text-white">
-        <button className="px-4 py-2 bg-purple-700 rounded-full">Bus</button>
-        <button className="px-4 py-2 bg-gray-700 rounded-full">Select Seat</button>
-        <button className="px-4 py-2 bg-gray-700 rounded-full">Payment</button>
+      <div className="relative z-10 flex justify-center mb-10">
+        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-full p-3 flex space-x-4">
+          <div className="flex items-center space-x-3 px-5 py-2 rounded-full bg-indigo-600 text-white shadow-md transition-all duration-300">
+            <Bus className="w-5 h-5" />
+            <span className="text-sm font-semibold">Select Bus</span>
+          </div>
+          <div className="flex items-center space-x-3 px-5 py-2 rounded-full text-white/70 hover:bg-white/10 transition-all duration-300">
+            <Armchair className="w-5 h-5" />
+            <span className="text-sm font-semibold">Select Seat</span>
+          </div>
+          <div className="flex items-center space-x-3 px-5 py-2 rounded-full text-white/70 hover:bg-white/10 transition-all duration-300">
+            <Coins className="w-5 h-5" />
+            <span className="text-sm font-semibold">Payment</span>
+          </div>
+        </div>
       </div>
 
-      {/* Main Home Content */}
-      <>
       {/* Search Bar */}
-      <div className="bg-white bg-opacity-10 backdrop-blur-md border border-white border-opacity-20 rounded-2xl p-6 mb-6 shadow-lg">
-        <h2 className="text-2xl font-bold text-white text-center mb-4">
-          Search Your Perfect Journey
-        </h2>
-        <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-white text-sm mb-2">From</label>
-            <Select
-              options={routes.filter((route) => route.value !== to?.value)}
-              value={from}
-              onChange={(option) => {
-                console.log("Selected from:", option);
-                setFrom(option);
-              }}
-              placeholder="Select departure city"
-              className="text-gray-800"
-              styles={{
-                control: (base) => ({
-                  ...base,
-                  backgroundColor: "rgba(255, 255, 255, 0.5)",
-                  borderRadius: "0.5rem",
-                  padding: "0.25rem",
-                }),
-                option: (base) => ({
-                  ...base,
-                  color: "#1a202c",
-                }),
-              }}
-              isClearable
-            />
-          </div>
-          <div>
-            <label className="block text-white text-sm mb-2">To</label>
-            <Select
-              options={routes.filter((route) => route.value !== from?.value)}
-              value={to}
-              onChange={(option) => {
-                console.log("Selected to:", option);
-                setTo(option);
-              }}
-              placeholder="Select destination city"
-              className="text-gray-800"
-              styles={{
-                control: (base) => ({
-                  ...base,
-                  backgroundColor: "rgba(255, 255, 255, 0.5)",
-                  borderRadius: "0.5rem",
-                  padding: "0.25rem",
-                }),
-                option: (base) => ({
-                  ...base,
-                  color: "#1a202c",
-                }),
-              }}
-              isClearable
-            />
-          </div>
-          <div>
-            <label className="block text-white text-sm mb-2">Departure Date</label>
-            <DatePicker
-              selected={departureDate}
-              onChange={(date) => {
-                console.log("Selected date:", date);
-                setDepartureDate(date);
-              }}
-              placeholderText="Select date"
-              dateFormat="dd-MM-yyyy"
-              minDate={new Date()}
-              className="w-full px-4 py-2 bg-white bg-opacity-50 rounded-lg text-gray-800 focus:outline-none"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full md:col-span-3 mt-4 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-200"
-            disabled={loading}
-          >
-            {loading ? "Searching..." : "Search Buses"}
-          </button>
-        </form>
-        {error && <p className="text-red-400 text-center mt-4">{error}</p>}
+<div className="relative z-10 bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 md:p-8 mb-8 shadow-xl">
+  <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-6">
+    Find Your Perfect Journey
+  </h2>
+  <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+    <div className="relative">
+      <label className="block text-white text-sm font-medium mb-2">From</label>
+      <Select
+        options={routes.filter((route) => route.value !== to?.value)}
+        value={from}
+        onChange={(option) => {
+          console.log("Selected from:", option);
+          setFrom(option);
+        }}
+        placeholder="Select departure city"
+        className="text-gray-800"
+        styles={{
+          control: (base) => ({
+            ...base,
+            backgroundColor: "rgba(255, 255, 255, 0.9)",
+            borderRadius: "0.75rem",
+            padding: "0.5rem",
+            border: "1px solid rgba(255, 255, 255, 0.3)",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+            "&:hover": { borderColor: "rgba(99, 102, 241, 0.5)" },
+          }),
+          option: (base, state) => ({
+            ...base,
+            color: "#1a202c",
+            backgroundColor: state.isSelected ? "#e0e7ff" : "white",
+            "&:hover": { backgroundColor: "#f1f5f9" },
+          }),
+          menu: (base) => ({
+            ...base,
+            backgroundColor: "white",
+            borderRadius: "0.75rem",
+            marginTop: "0.25rem",
+          }),
+        }}
+        isClearable
+      />
+    </div>
+    
+    <div className="relative">
+      <label className="block text-white text-sm font-medium mb-2">To</label>
+      <Select
+        options={routes.filter((route) => route.value !== from?.value)}
+        value={to}
+        onChange={(option) => {
+          console.log("Selected to:", option);
+          setTo(option);
+        }}
+        placeholder="Select destination city"
+        className="text-gray-800"
+        styles={{
+          control: (base) => ({
+            ...base,
+            backgroundColor: "rgba(255, 255, 255, 0.9)",
+            borderRadius: "0.75rem",
+            padding: "0.5rem",
+            border: "1px solid rgba(255, 255, 255, 0.3)",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+            "&:hover": { borderColor: "rgba(99, 102, 241, 0.5)" },
+          }),
+          option: (base, state) => ({
+            ...base,
+            color: "#1a202c",
+            backgroundColor: state.isSelected ? "#e0e7ff" : "white",
+            "&:hover": { backgroundColor: "#f1f5f9" },
+          }),
+          menu: (base) => ({
+            ...base,
+            backgroundColor: "white",
+            borderRadius: "0.75rem",
+            marginTop: "0.25rem",
+          }),
+        }}
+        isClearable
+      />
+    </div>
+    
+    <div className="relative">
+      <label className="block text-white text-sm font-medium mb-2">
+        Departure Date
+      </label>
+      <div className="relative">
+        <DatePicker
+          selected={departureDate}
+          onChange={(date) => {
+            console.log("Selected date:", date);
+            setDepartureDate(date);
+          }}
+          placeholderText="Select date"
+          dateFormat="dd-MM-yyyy"
+          minDate={new Date()}
+          className="w-full px-4 py-[0.875rem] pr-10 bg-white/90 rounded-xl text-gray-800 border border-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 shadow-sm hover:border-indigo-400"
+          wrapperClassName="w-full"
+        />
+        <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
       </div>
+    </div>
+
+    <button
+      type="submit"
+      className="w-full md:col-span-3 mt-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition duration-300 font-semibold shadow-md hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+      disabled={loading}
+      aria-label="Search Buses"
+    >
+      {loading ? (
+        <span className="flex items-center justify-center">
+          <svg
+            className="animate-spin h-5 w-5 mr-2 text-white"
+            viewBox="0 0 24 24"
+          >
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+          Searching...
+        </span>
+      ) : (
+        "Search Buses"
+      )}
+    </button>
+  </form>
+  {error && (
+    <p className="text-red-300 text-center mt-4 font-medium animate-pulse">{error}</p>
+  )}
+</div>
 
       {/* Bus Listings */}
-      <div>
-        <h3 className="text-xl font-bold text-white mb-4">
-          Available Buses <span className="text-gray-400">{buses.length} buses found</span>
+      <div className="relative z-10">
+        <h3 className="text-2xl font-bold text-white mb-6">
+          Available Buses <span className="text-gray-300 text-sm">({buses.length} found)</span>
         </h3>
-        {loading && <p className="text-white text-center">Loading buses...</p>}
-        {!loading && buses.length === 0 && !error && (
-          <p className="text-gray-400 text-center">No buses found. Try different search criteria.</p>
+        {loading && (
+          <div className="text-center py-12">
+            <svg
+              className="animate-spin h-8 w-8 text-indigo-400 mx-auto"
+              viewBox="0 0 24 24"
+            >
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+            <p className="text-white text-lg mt-4">Loading buses...</p>
+          </div>
         )}
+
         {buses.map((bus) => (
           <div
             key={bus.id}
-            className="bg-white bg-opacity-10 backdrop-blur-md border border-white border-opacity-20 rounded-2xl p-4 mb-4 shadow-lg"
+            className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 mb-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:bg-white/15"
           >
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-              <div className="mb-4 md:mb-0">
-                <h4 className="text-lg font-semibold text-white">{bus.name}</h4>
-                <div className="text-gray-300 text-sm">
-                  <p>Distance: {bus.distance}</p>
-                  <p>
-                    From: {bus.from} <span className="text-gray-400">({bus.departure})</span>
-                  </p>
-                  <p>
-                    To: {bus.to} <span className="text-gray-400">({bus.arrival})</span>
-                  </p>
-                  <p>Duration: {bus.duration}</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="flex-1">
+                <h4 className="text-xl font-semibold text-white">{bus.name}</h4>
+                <div className="text-gray-200 text-sm space-y-1 mt-2">
+                  <p><span className="font-medium">Route:</span> {bus.from} → {bus.to}</p>
+                  <p><span className="font-medium">Distance:</span> {bus.distance}</p>
+                  <p><span className="font-medium">Duration:</span> {bus.duration}</p>
+                  <p><span className="font-medium">Starting Price:</span> ₹{bus.price.toLocaleString()}</p>
                 </div>
-                <div className="flex space-x-2 mt-2">
-                  {bus.amenities.map((amenity, index) => (
-                    <span
-                      key={index}
-                      className="text-gray-400 text-xs bg-gray-700 px-2 py-1 rounded-full"
-                    >
-                      {amenity}
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {bus.amenities.length > 0 ? (
+                    bus.amenities.map((amenity, index) => (
+                      <span
+                        key={index}
+                        className="text-gray-200 text-xs bg-indigo-800/50 px-3 py-1 rounded-full border border-indigo-500/30"
+                      >
+                        {amenity}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-200 text-xs bg-gray-800/50 px-3 py-1 rounded-full border border-gray-500/30">
+                      No amenities listed
                     </span>
-                  ))}
+                  )}
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-white">₹{bus.price}</p>
-                <p className="text-gray-400 text-sm">per person</p>
+              <div className="w-full md:w-auto">
                 <button
                   onClick={() => handleBookNow(bus.id, bus.routeId)}
-                  className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
+                  className="w-full md:w-auto bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-all duration-300 font-semibold shadow-md hover:shadow-xl transform hover:scale-105"
+                  aria-label={`Book ${bus.name}`}
                 >
                   Book Now
                 </button>
@@ -298,7 +338,6 @@ const Home = () => {
           </div>
         ))}
       </div>
-        </>
     </div>
   );
 };
