@@ -21,26 +21,18 @@ export const logout = () =>
         withCredentials: true
     });
 
-export const getCurrentUser = () =>                                  
-    axios.get(`${API_BASE}/users/current`, {
-        withCredentials: true
-    });
- 
 export const changePassword = (passwordData) =>
     axios.post(`${API_BASE}/users/changepassword`, passwordData, {
         withCredentials: true
     });
 
-export const getUserProfile = (username) =>                               
-    axios.get(`${API_BASE}/users/${username}/profile`, {
+export const getUserProfile = () =>                               
+    axios.get(`${API_BASE}/users/profile`, {
         withCredentials: true
     });
 
-export const updateProfile = (username, profileData) =>
-    axios.put(`${API_BASE}/users/${username}/updateprofile`, profileData, {
-        headers: {
-            'Content-Type': 'application/json'
-        },
+export const updateProfile = (profileData) =>
+    axios.put(`${API_BASE}/users/update`, profileData, {
         withCredentials: true
     });
 

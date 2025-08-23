@@ -24,7 +24,6 @@ const Home = () => {
       try {
         const response = await getRoutes();
         const apiData = response?.data?.data;
-        console.log("Fetched routes raw:", response);
         const routesArray = Array.isArray(apiData) ? apiData : [];
         const uniqueLocations = [
           ...new Set(
@@ -35,7 +34,6 @@ const Home = () => {
         ];
         const routeOptions = uniqueLocations.map((loc) => ({ value: loc, label: loc }));
         setRoutes(routeOptions);
-        console.log("Processed route options:", routeOptions);
       } catch (err) {
         console.error("Error fetching routes:", err?.message || err);
         setError(err?.message || "Failed to load routes");
@@ -46,7 +44,6 @@ const Home = () => {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    console.log("Form submitted with:", { from, to, departureDate });
     if (!from?.value || !to?.value || !departureDate) {
       setError("Please select departure city, destination city, and date");
       console.warn("Validation failed:", { from, to, departureDate });
@@ -95,7 +92,6 @@ const Home = () => {
           )
         : [];
       setBuses(busList);
-      console.log("Processed bus list:", busList);
       if (busList.length === 0) {
         setError("No buses found for the selected criteria");
       }
@@ -150,7 +146,6 @@ const Home = () => {
         options={routes.filter((route) => route.value !== to?.value)}
         value={from}
         onChange={(option) => {
-          console.log("Selected from:", option);
           setFrom(option);
         }}
         placeholder="Select departure city"

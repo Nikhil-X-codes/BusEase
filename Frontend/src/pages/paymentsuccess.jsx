@@ -20,17 +20,15 @@ export default function PaymentSuccess() {
       gender: seat.gender || "N/A",
       type: seat.type || "Seater",
     })) || [],
-    totalAmount: payment?.amount || 0, // From payment response
+    totalAmount: payment?.amount || 0, 
   };
 
   useEffect(() => {
-    // Animate success checkmark after component mounts
     const timer = setTimeout(() => setShowSuccess(true), 500);
     return () => clearTimeout(timer);
   }, []);
 
   const generatePDF = () => {
-    // Create HTML content for PDF
     const pdfContent = `
       <!DOCTYPE html>
       <html>
@@ -118,7 +116,6 @@ export default function PaymentSuccess() {
       </html>
     `;
 
-    // Create and download the PDF content as HTML file
     const blob = new Blob([pdfContent], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -170,7 +167,6 @@ export default function PaymentSuccess() {
 
       {/* Main Content */}
       <div className="relative z-10 max-w-4xl mx-auto px-4 md:px-6 pb-8">
-        {/* Fallback UI if no booking data */}
         {!bus || !selectedSeats || selectedSeats.length === 0 ? (
           <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 md:p-8 shadow-xl text-center">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">No Booking Data Available</h2>
@@ -185,7 +181,6 @@ export default function PaymentSuccess() {
           </div>
         ) : (
           <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 md:p-8 shadow-xl">
-            {/* Success Animation */}
             <div className="text-center mb-8">
               <div
                 className={`inline-flex items-center justify-center w-24 h-24 rounded-full bg-indigo-500/20 border-4 border-indigo-400 transition-all duration-1000 ${

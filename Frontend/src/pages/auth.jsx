@@ -63,7 +63,6 @@ const handleSubmit = async (e) => {
             formDataObj.append('password', formData.password);
             
             const response = await register(formDataObj);
-            console.log('Registration successful:', response.data);
             setIsSignUp(false);
         } else {
             const formDataObj = new FormData();
@@ -71,7 +70,6 @@ const handleSubmit = async (e) => {
             formDataObj.append('password', formData.password);
             
             const response = await login(formDataObj);
-            console.log('Login successful:', response.data);
 
             navigate('/home'); 
         }
