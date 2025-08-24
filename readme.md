@@ -1,4 +1,4 @@
-# 🚌 BusEase – Your Easy Bus Booking Companion (Live only at :- BusEase.vercel.app)
+# 🚌 BusEase – Your Easy Bus Booking Companion (Live only at :- https://bus-ease-six.vercel.app)
 
 **BusEase** is a MERN-stack bus ticket booking web application that allows users to search buses, select seats, and simulate payments using debit card details. The system includes authentication, bus search, seat selection, payment form (UI only), and a booking confirmation page. 
 
