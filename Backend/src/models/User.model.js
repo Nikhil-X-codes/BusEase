@@ -2,7 +2,6 @@ import mongoose, { Schema } from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
-
 const userschema=new Schema({
     username: {
     type: String,
@@ -28,24 +27,6 @@ const userschema=new Schema({
     type: String,
     enum: ['male','female']
   },
-  bookingHistory:[
-    {
-        type: Schema.Types.ObjectId,
-        ref: "Bus",
-        seats: [{
-            seatNumber: String,
-            price: Number,
-            type: {
-                type: String,
-                enum: ["Sleeper", "Seater"]
-            }
-        }],
-        bookingDate: {
-            type: Date,
-            default: Date.now
-        }
-    }
-  ],
     resetPasswordOTP: {
         type: String
     },

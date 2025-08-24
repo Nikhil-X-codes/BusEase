@@ -9,12 +9,9 @@ import mongoose from 'mongoose';
 const createBus = asyncHandler(async (req, res) => {
   const { busNumber, amenities, Seats, startLocationName, endLocationName } = req.body;
 
-  // Validate required fields
   if (!busNumber || !Seats || !Array.isArray(Seats) || !startLocationName || !endLocationName) {
     throw new ApiError(400, "Bus number, seats (array), startLocationName, and endLocationName are required");
   }
-
-  // Validate seat data
   Seats.forEach((seat) => {
     if (!["Sleeper", "Seater"].includes(seat.Type)) {
       throw new ApiError(400, `Invalid seat type: ${seat.SeatNumber}. Must be "Sleeper" or "Seater"`);
@@ -27,25 +24,22 @@ const createBus = asyncHandler(async (req, res) => {
     }
   });
 
-  // Check for duplicate seat numbers
   const seatNumbers = Seats.map((s) => s.SeatNumber);
   const hasDuplicate = new Set(seatNumbers).size !== seatNumbers.length;
   if (hasDuplicate) {
     throw new ApiError(400, "Duplicate seat numbers within the same bus");
   }
 
-  // Check if bus with this number already exists
   const busExists = await Bus.findOne({ busNumber });
   if (busExists) {
     throw new ApiError(400, "Bus with this number already exists");
   }
 
-  // Start a transaction
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // Find or create Route document
+
     let route = await Route.findOne(
       {
         startLocation: { $regex: `^${startLocationName}$`, $options: "i" },
@@ -55,21 +49,10 @@ const createBus = asyncHandler(async (req, res) => {
       { session }
     );
 
-    if (!route) {
-      route = await Route.create(
-        [{
-          startLocation: startLocationName,
-          endLocation: endLocationName,
-          totalDistance: 0,
-          totalDuration: 0,
-          buses: [],
-        }],
-        { session }
-      );
-      route = route[0];
-    }
+if (!route) {
+  throw new ApiError(400, "Route not found. Please create the route first with distance and duration.");
+}
 
-    // Create the bus
     const bus = await Bus.create(
       [{
         busNumber,
@@ -81,11 +64,9 @@ const createBus = asyncHandler(async (req, res) => {
       { session }
     );
 
-    // Add bus to route's buses array
     route.buses.push(bus[0]._id);
     await route.save({ session });
 
-    // Populate route details for response
     const populatedBus = await Bus.findById(bus[0]._id)
       .populate({
         path: "startLocation endLocation",
@@ -261,7 +242,7 @@ const deleteBus = asyncHandler(async (req, res) => {
 });
 
 
-const updateSeatAvailability = asyncHandler(async (req, res) => {                                           // pending
+const updateSeatAvailability = asyncHandler(async (req, res) => {                                          
   const bus = await Bus.findById(req.params.id).select("-amenities -capacity");
 
   if (bus) {

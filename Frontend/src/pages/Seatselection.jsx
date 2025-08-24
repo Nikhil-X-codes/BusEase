@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Users, X } from "lucide-react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Users, X ,Bus, Armchair,Coins} from "lucide-react";
+import { useNavigate, useParams, useSearchParams,useLocation } from "react-router-dom";
 import { getBusById } from "../services/book.service";
 
 export default function SeatSelection() {
@@ -12,7 +12,9 @@ export default function SeatSelection() {
   const [searchParams] = useSearchParams();
   const busId = params?.busId;
   const routeId = searchParams.get("routeId");
-
+  const location = useLocation();
+const selectedDate = location.state?.selectedDate;
+  
   useEffect(() => {
     const load = async () => {
       try {
@@ -86,11 +88,12 @@ export default function SeatSelection() {
       alert("Please enter names for all selected passengers.");
       return;
     }
-    const payload = {
-      bus,
-      routeId,
-      selectedSeats,
-    };
+  const payload = {
+    bus,
+    routeId,
+    selectedSeats,
+    selectedDate, 
+  };
     navigate('/payment', { state: payload });
   };
 
@@ -184,15 +187,15 @@ export default function SeatSelection() {
       <div className="relative z-10 flex justify-center mb-10">
         <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-full p-3 flex space-x-4">
           <div className="flex items-center space-x-3 px-5 py-2 rounded-full text-white/70 hover:bg-white/10 transition-all duration-300">
-            <Users className="w-5 h-5" />
+            <Bus className="w-5 h-5" />
             <span className="text-sm font-semibold">Select Bus</span>
           </div>
           <div className="flex items-center space-x-3 px-5 py-2 rounded-full bg-indigo-600 text-white shadow-md transition-all duration-300">
-            <Users className="w-5 h-5" />
+            <Armchair className="w-5 h-5" />
             <span className="text-sm font-semibold">Select Seat</span>
           </div>
           <div className="flex items-center space-x-3 px-5 py-2 rounded-full text-white/70 hover:bg-white/10 transition-all duration-300">
-            <Users className="w-5 h-5" />
+            <Coins className="w-5 h-5" />
             <span className="text-sm font-semibold">Payment</span>
           </div>
         </div>
@@ -223,39 +226,61 @@ export default function SeatSelection() {
 
             {/* Driver Indicator */}
             <div className="mb-6">
-              <div className="bg-gray-600 text-white text-center py-2 rounded-lg text-sm font-medium">Driver</div>
+              <div className="bg-gray-600 text-white text-center py-2 rounded-lg text-sm font-medium">Driver and Conductor</div>
             </div>
 
-            {/* Sleeper Seats */}
-            <div className="mb-6">
-              <h3 className="text-white font-semibold mb-3 text-center">Sleeper Seats</h3>
-              <div className="bg-white/10 p-4 rounded-lg">
-                <div className="flex justify-center gap-2 flex-wrap">
-                  {sleeperSeats.map((seat) => (
-                    <button
-                      key={seat.id}
-                      onClick={() => handleSeatClick(seat)}
-                      className={`rounded-lg text-white text-sm font-medium transition-all duration-200 flex items-center justify-center ${getSeatColor(
-                        seat.status,
-                        seat.type
-                      )}`}
-                      disabled={seat.status === "booked"}
-                      title={`Sleeper ${seat.label}`}
-                    >
-                      {seat.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+{/* Sleeper Seats */}
+<div className="mb-6">
+  <h3 className="text-white font-semibold mb-3 text-center">Sleeper Seats</h3>
+  <div className="bg-white/10 p-4 rounded-lg">
+    <div className="flex justify-center gap-2 flex-wrap">
+      {sleeperSeats.map((seat) => (
+        <button
+          key={seat.id}
+          onClick={() => handleSeatClick(seat)}
+          className={`w-10 h-10 rounded-lg text-white text-xs font-medium transition-all duration-200 flex items-center justify-center ${getSeatColor(
+            seat.status,
+            seat.type
+          )}`}
+          disabled={seat.status === "booked"}
+          title={`Sleeper ${seat.label}`}
+        >
+          {seat.label}
+        </button>
+      ))}
+    </div>
+  </div>
+</div>
 
-            {/* Seater Seats */}
-            <div>
-              <h3 className="text-white font-semibold mb-3 text-center">Seater Seats</h3>
-              <div className="bg-white/10 p-6 rounded-lg">
-                {Object.keys(seaterSeatsByRow).map((rowNum) => renderSeaterRow(seaterSeatsByRow[parseInt(rowNum)]))}
-              </div>
-            </div>
+{/* Seater Seats */}
+<div>
+  <h3 className="text-white font-semibold mb-3 text-center">Seater Seats</h3>
+  <div className="bg-white/10 p-6 rounded-lg">
+    <div className="grid gap-2 justify-center"
+      style={{
+        gridTemplateColumns: "repeat(auto-fill, minmax(40px, 1fr))"
+      }}
+    >
+      {Object.keys(seaterSeatsByRow).map((rowNum) =>
+        seaterSeatsByRow[parseInt(rowNum)].map((seat) => (
+          <button
+            key={seat.id}
+            onClick={() => handleSeatClick(seat)}
+            className={`w-10 h-10 rounded-lg text-white text-xs font-medium transition-all duration-200 flex items-center justify-center ${getSeatColor(
+              seat.status,
+              seat.type
+            )}`}
+            disabled={seat.status === "booked"}
+            title={`Seater ${seat.label}`}
+          >
+            {seat.label}
+          </button>
+        ))
+      )}
+    </div>
+  </div>
+</div>
+
 
             {/* Selected Seats Count */}
             <div className="mt-4 text-center">

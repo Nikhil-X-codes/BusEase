@@ -1,27 +1,68 @@
 import { useEffect, useState } from "react";
-import { CheckCircle, Download, Home, Calendar, MapPin, Users } from "lucide-react";
+import { CheckCircle, Download, Home, Calendar, MapPin, Users, Bus, Armchair,Coins } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { getPaymentById } from "../services/payment.service";
 
 export default function PaymentSuccess() {
   const [showSuccess, setShowSuccess] = useState(false);
+  const [paymentData, setPaymentData] = useState(null);
+  const [fetching, setFetching] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
   const location = useLocation();
-  const { bus, routeId, selectedSeats, payment } = location.state || {};
+  const { bus, routeId, selectedSeats, payment, selectedDate } = location.state || {};
+
+  const capitalize = (str) =>
+  typeof str === "string" && str.length > 0
+    ? str.charAt(0).toUpperCase() + str.slice(1)
+    : str;
+
+  const resolvedPayment = paymentData || payment || null;
 
   const bookingData = {
-    busName: bus?.busNumber || "Unknown Bus",
-    bookingId: `BG${Math.random().toString(36).substr(2, 8).toUpperCase()}`, 
-    paymentId: payment?.paymentId || `PAY${Math.random().toString(36).substr(2, 10).toUpperCase()}`, 
-    date: bus?.date ? new Date(bus.date).toDateString() : new Date().toDateString(),
-    from: bus?.startLocation?.startLocation || "Unknown",
-    to: bus?.endLocation?.endLocation || "Unknown",
-    passengers: selectedSeats?.map((seat) => ({
-      name: seat.passengerName || "Unknown",
-      seat: seat.label || seat.id,
-      gender: seat.gender || "N/A",
-      type: seat.type || "Seater",
-    })) || [],
-    totalAmount: payment?.amount || 0, 
+    busName: bus?.busNumber || resolvedPayment?.bus?.busNumber || "Unknown Bus",
+
+    bookingId: `BG${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
+    
+    paymentId: resolvedPayment?._id || payment?._id || payment?.paymentId || `PAY${Math.random().toString(36).substr(2, 10).toUpperCase()}`,
+    date: resolvedPayment?.selectedDate
+      ? new Date(resolvedPayment.selectedDate).toDateString()
+      : selectedDate
+      ? new Date(selectedDate).toDateString()
+      : bus?.date
+      ? new Date(bus.date).toDateString()
+      : resolvedPayment?.createdAt
+      ? new Date(resolvedPayment.createdAt).toDateString()
+      : new Date().toDateString(),
+    from: bus?.startLocation?.startLocation || resolvedPayment?.startLocation || "Unknown",
+    to: bus?.endLocation?.endLocation || resolvedPayment?.endLocation || "Unknown",
+    passengers:
+      selectedSeats?.map((seat) => ({
+        name: capitalize(seat.passengerName || "Unknown"),
+        seat: capitalize(seat.label || seat.id),
+        gender: capitalize(seat.gender || "N/A"),
+        type: capitalize(seat.type || "Seater"),
+      })) || [],
+    totalAmount: resolvedPayment?.amount || payment?.amount || 0,
   };
+
+  // If location.state provides only an id (payment._id or paymentId), fetch full payment doc
+  useEffect(() => {
+    const loadPayment = async () => {
+      const idFromState = payment?._id || (location.state && location.state.paymentId) || null;
+      if (!idFromState) return;
+      try {
+        setFetching(true);
+        const resp = await getPaymentById(idFromState);
+        const data = resp?.data?.data;
+        if (data) setPaymentData(data);
+      } catch (e) {
+        setFetchError(e?.response?.data?.message || e?.message || "Failed to fetch payment");
+      } finally {
+        setFetching(false);
+      }
+    };
+    loadPayment();
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSuccess(true), 500);
@@ -75,32 +116,34 @@ export default function PaymentSuccess() {
 
         <div class="section">
           <div class="section-title">Passenger Details</div>
-          ${bookingData.passengers
-            .map(
-              (passenger) => `
-            <div class="passenger-card">
-              <div class="info-grid">
-                <div class="info-item">
-                  <div class="info-label">Name</div>
-                  <div class="info-value">${passenger.name}</div>
-                </div>
-                <div class="info-item">
-                  <div class="info-label">Gender</div>
-                  <div class="info-value">${passenger.gender}</div>
-                </div>
-                <div class="info-item">
-                  <div class="info-label">Seat Number</div>
-                  <div class="info-value">${passenger.seat}</div>
-                </div>
-                <div class="info-item">
-                  <div class="info-label">Seat Type</div>
-                  <div class="info-value">${passenger.type}</div>
-                </div>
-              </div>
-            </div>
-          `
-            )
-            .join("")}
+ 
+${bookingData.passengers
+  .map(
+    (passenger) => `
+  <div class="passenger-card">
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Name</div>
+        <div class="info-value">${passenger.name}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Gender</div>
+        <div class="info-value">${passenger.gender}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Seat Number</div>
+        <div class="info-value">${passenger.seat}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Seat Type</div>
+        <div class="info-value">${passenger.type}</div>
+      </div>
+    </div>
+  </div>
+`
+  )
+  .join("")}
+      
         </div>
 
         <div class="section">
@@ -151,15 +194,15 @@ export default function PaymentSuccess() {
       <div className="relative z-10 flex justify-center mb-10">
         <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-full p-3 flex space-x-4">
           <div className="flex items-center space-x-3 px-5 py-2 rounded-full text-white/70 hover:bg-white/10 transition-all duration-300">
-            <Users className="w-5 h-5" />
+            <Bus className="w-5 h-5" />
             <span className="text-sm font-semibold">Select Bus</span>
           </div>
           <div className="flex items-center space-x-3 px-5 py-2 rounded-full text-white/70 hover:bg-white/10 transition-all duration-300">
-            <Users className="w-5 h-5" />
+            <Armchair className="w-5 h-5" />
             <span className="text-sm font-semibold">Select Seat</span>
           </div>
           <div className="flex items-center space-x-3 px-5 py-2 rounded-full bg-indigo-600 text-white shadow-md transition-all duration-300">
-            <Users className="w-5 h-5" />
+            <Coins className="w-5 h-5" />
             <span className="text-sm font-semibold">Payment</span>
           </div>
         </div>
@@ -267,30 +310,30 @@ export default function PaymentSuccess() {
                 <Users className="w-5 h-5 mr-2" />
                 Passenger Details
               </h4>
-              <div className="space-y-4">
-                {bookingData.passengers.map((passenger, index) => (
-                  <div key={index} className="bg-white/10 p-4 rounded-lg">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="text-white/60">Name</span>
-                        <div className="text-white font-medium">{passenger.name}</div>
-                      </div>
-                      <div>
-                        <span className="text-white/60">Gender</span>
-                        <div className="text-white font-medium">{passenger.gender}</div>
-                      </div>
-                      <div>
-                        <span className="text-white/60">Seat No.</span>
-                        <div className="text-white font-medium">{passenger.seat}</div>
-                      </div>
-                      <div>
-                        <span className="text-white/60">Seat Type</span>
-                        <div className="text-white font-medium">{passenger.type}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+             <div className="space-y-4">
+  {bookingData.passengers.map((passenger, index) => (
+    <div key={index} className="bg-white/10 p-4 rounded-lg">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div>
+          <span className="text-white/60">Name</span>
+          <div className="text-white font-medium">{passenger.name}</div>
+        </div>
+        <div>
+          <span className="text-white/60">Gender</span>
+          <div className="text-white font-medium">{passenger.gender}</div>
+        </div>
+        <div>
+          <span className="text-white/60">Seat No.</span>
+          <div className="text-white font-medium">{passenger.seat}</div>
+        </div>
+        <div>
+          <span className="text-white/60">Seat Type</span>
+          <div className="text-white font-medium">{passenger.type}</div>
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
             </div>
 
             {/* Action Buttons */}

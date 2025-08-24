@@ -18,7 +18,6 @@ const Home = () => {
   const navigate = useNavigate();
 
 
-
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
@@ -57,7 +56,6 @@ const Home = () => {
         endLocation: to.value,
       });
       const apiData = response?.data?.data;
-      console.log("Bus search result raw:", response);
       const routesArray = Array.isArray(apiData) ? apiData : [];
       const busList = Array.isArray(routesArray)
         ? routesArray.flatMap((route) =>
@@ -68,23 +66,12 @@ const Home = () => {
                   distance: `${route.totalDistance || 0} km`,
                   from: route.startLocation || "Unknown",
                   to: route.endLocation || "Unknown",
-                  departure: route.date
-                    ? new Date(route.date).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "N/A",
-                  arrival: route.date && route.totalDuration
-                    ? new Date(
-                        new Date(route.date).getTime() + route.totalDuration * 60 * 1000
-                      ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                    : "N/A",
                   duration: route.totalDuration
-                    ? `${Math.floor(route.totalDuration / 60)}h ${route.totalDuration % 60}m`
+                    ? `${route.totalDuration}h`
                     : "N/A",
-                  price: bus.Seats && Array.isArray(bus.Seats) && bus.Seats.length > 0
-                    ? bus.Seats[0].price || 0
-                    : 0,
+price: bus.Seats && Array.isArray(bus.Seats) && bus.Seats.length > 0
+  ? Math.min(...bus.Seats.map(seat => seat.price || 0))
+  : 0,
                   amenities: Array.isArray(bus.amenities) ? bus.amenities : [],
                   routeId: route._id || "",
                 }))
@@ -103,10 +90,11 @@ const Home = () => {
     }
   };
 
-  const handleBookNow = (busId, routeId) => {
-    console.log("Navigating to seat selection for bus:", busId, "route:", routeId);
-    navigate(`/buses/${busId}/seats?routeId=${routeId}`);
-  };
+ const handleBookNow = (busId, routeId) => {
+  navigate(`/buses/${busId}/seats?routeId=${routeId}`, {
+    state: { selectedDate: departureDate }
+  });
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 p-4 md:p-8 relative overflow-hidden">
@@ -142,77 +130,81 @@ const Home = () => {
   <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
     <div className="relative">
       <label className="block text-white text-sm font-medium mb-2">From</label>
-      <Select
-        options={routes.filter((route) => route.value !== to?.value)}
-        value={from}
-        onChange={(option) => {
-          setFrom(option);
-        }}
-        placeholder="Select departure city"
-        className="text-gray-800"
-        styles={{
-          control: (base) => ({
-            ...base,
-            backgroundColor: "rgba(255, 255, 255, 0.9)",
-            borderRadius: "0.75rem",
-            padding: "0.5rem",
-            border: "1px solid rgba(255, 255, 255, 0.3)",
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-            "&:hover": { borderColor: "rgba(99, 102, 241, 0.5)" },
-          }),
-          option: (base, state) => ({
-            ...base,
-            color: "#1a202c",
-            backgroundColor: state.isSelected ? "#e0e7ff" : "white",
-            "&:hover": { backgroundColor: "#f1f5f9" },
-          }),
-          menu: (base) => ({
-            ...base,
-            backgroundColor: "white",
-            borderRadius: "0.75rem",
-            marginTop: "0.25rem",
-          }),
-        }}
-        isClearable
-      />
+<Select
+  options={routes.filter((route) => route.value !== to?.value)}
+  value={from}
+  onChange={(option) => setFrom(option)}
+  placeholder="Select departure city"
+  className="text-gray-800"
+  menuPortalTarget={document.body}   
+  styles={{
+    control: (base) => ({
+      ...base,
+      backgroundColor: "rgba(255, 255, 255, 0.9)",
+      borderRadius: "0.75rem",
+      padding: "0.5rem",
+      border: "1px solid rgba(255, 255, 255, 0.3)",
+      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+      "&:hover": { borderColor: "rgba(99, 102, 241, 0.5)" },
+      zIndex: 20, 
+    }),
+    option: (base, state) => ({
+      ...base,
+      color: "#1a202c",
+      backgroundColor: state.isSelected ? "#e0e7ff" : "white",
+      "&:hover": { backgroundColor: "#f1f5f9" },
+    }),
+    menu: (base) => ({
+      ...base,
+      backgroundColor: "white",
+      borderRadius: "0.75rem",
+      marginTop: "0.5rem", 
+      zIndex: 9999,       
+    }),
+    menuPortal: (base) => ({ ...base, zIndex: 9999 }), 
+  }}
+  isClearable
+/>
+
     </div>
     
     <div className="relative">
       <label className="block text-white text-sm font-medium mb-2">To</label>
       <Select
-        options={routes.filter((route) => route.value !== from?.value)}
-        value={to}
-        onChange={(option) => {
-          console.log("Selected to:", option);
-          setTo(option);
-        }}
-        placeholder="Select destination city"
-        className="text-gray-800"
-        styles={{
-          control: (base) => ({
-            ...base,
-            backgroundColor: "rgba(255, 255, 255, 0.9)",
-            borderRadius: "0.75rem",
-            padding: "0.5rem",
-            border: "1px solid rgba(255, 255, 255, 0.3)",
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-            "&:hover": { borderColor: "rgba(99, 102, 241, 0.5)" },
-          }),
-          option: (base, state) => ({
-            ...base,
-            color: "#1a202c",
-            backgroundColor: state.isSelected ? "#e0e7ff" : "white",
-            "&:hover": { backgroundColor: "#f1f5f9" },
-          }),
-          menu: (base) => ({
-            ...base,
-            backgroundColor: "white",
-            borderRadius: "0.75rem",
-            marginTop: "0.25rem",
-          }),
-        }}
-        isClearable
-      />
+  options={routes.filter((route) => route.value !== from?.value)}
+  value={to}
+  onChange={(option) => setTo(option)}  // ✅ FIXED
+  placeholder="Select destination city"
+  className="text-gray-800"
+  menuPortalTarget={document.body}   
+  styles={{
+    control: (base) => ({
+      ...base,
+      backgroundColor: "rgba(255, 255, 255, 0.9)",
+      borderRadius: "0.75rem",
+      padding: "0.5rem",
+      border: "1px solid rgba(255, 255, 255, 0.3)",
+      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+      "&:hover": { borderColor: "rgba(99, 102, 241, 0.5)" },
+      zIndex: 20, 
+    }),
+    option: (base, state) => ({
+      ...base,
+      color: "#1a202c",
+      backgroundColor: state.isSelected ? "#e0e7ff" : "white",
+      "&:hover": { backgroundColor: "#f1f5f9" },
+    }),
+    menu: (base) => ({
+      ...base,
+      backgroundColor: "white",
+      borderRadius: "0.75rem",
+      marginTop: "0.5rem", 
+      zIndex: 9999,       
+    }),
+    menuPortal: (base) => ({ ...base, zIndex: 9999 }), 
+  }}
+  isClearable
+/>
     </div>
     
     <div className="relative">
@@ -223,7 +215,6 @@ const Home = () => {
         <DatePicker
           selected={departureDate}
           onChange={(date) => {
-            console.log("Selected date:", date);
             setDepartureDate(date);
           }}
           placeholderText="Select date"

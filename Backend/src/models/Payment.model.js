@@ -20,6 +20,7 @@ const PaymentSchema = new Schema(
 		},
 		seats: [BookedSeatSchema],
 		startLocation: { type: String },
+		selectedDate: { type: Date },
 		endLocation: { type: String },
 		amount: {
 			type: Number,

@@ -21,7 +21,7 @@ const RouteSchema = new Schema({
     type: Date,
     default: Date.now,
   },
-  buses: [{ // Hypothetical field to store Bus IDs
+  buses: [{ 
     type: Schema.Types.ObjectId,
     ref: "Bus",
   }],
@@ -29,7 +29,7 @@ const RouteSchema = new Schema({
   timestamps: true,
 });
 
-RouteSchema.index({ startLocation: 1, endLocation: 1, date: 1 }); // Index for performance
+RouteSchema.index({ startLocation: 1, endLocation: 1, date: 1 }); 
 
 const Route = mongoose.model("Route", RouteSchema);
 export default Route;

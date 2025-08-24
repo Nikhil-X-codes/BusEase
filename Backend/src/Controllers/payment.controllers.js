@@ -7,7 +7,7 @@ import ApiResponse from '../utils/ApiResponse.js';
 
 
 const createPayment = asyncHandler(async (req, res) => {
-  const { busId, seatNumbers = [], cardDetails } = req.body;
+  const { busId, seatNumbers = [], cardDetails, selectedDate } = req.body;
   const userId = req.user?._id; 
 
   let userExists = null;
@@ -68,7 +68,8 @@ const createPayment = asyncHandler(async (req, res) => {
     user: userId || null, 
     bus: bus._id,
     seats: seatsToBook,
-    startLocation: bus.startLocation?.startLocation,
+  startLocation: bus.startLocation?.startLocation,
+  selectedDate: selectedDate ? new Date(selectedDate) : undefined,
     endLocation: bus.endLocation?.endLocation,
     amount: total,
     cardDetails: {
@@ -79,7 +80,7 @@ const createPayment = asyncHandler(async (req, res) => {
     },
   });
 
-  const populatedPayment = await Payment.findById(payment._id).populate('bus', 'busNumber');
+  const populatedPayment = await Payment.findById(payment._id).populate('bus', 'busNumber date');
 
   res.status(201).json(new ApiResponse(201, 'Payment created successfully', populatedPayment));
 });
@@ -87,7 +88,7 @@ const createPayment = asyncHandler(async (req, res) => {
 const getPayments = asyncHandler(async (req, res) => {
   const userId = req.user?._id;
   const payments = await Payment.find({ user: userId })
-    .populate('bus', 'busNumber')
+    .populate('bus', 'busNumber date')
     .sort({ createdAt: -1 });
   res.json(new ApiResponse(200, 'Payments retrieved successfully', payments));
 });
@@ -95,7 +96,7 @@ const getPayments = asyncHandler(async (req, res) => {
 
 const getPaymentById = asyncHandler(async (req, res) => {
   const payment = await Payment.findOne({ _id: req.params.id, user: req.user?._id })
-    .populate('bus', 'busNumber');
+    .populate('bus', 'busNumber date');
 
   if (payment) {
     res.json(new ApiResponse(200, 'Payment retrieved successfully', payment));
@@ -103,7 +104,6 @@ const getPaymentById = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Payment not found');
   }
 });
-
 
 
 export {

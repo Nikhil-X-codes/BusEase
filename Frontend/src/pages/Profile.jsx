@@ -158,16 +158,6 @@ export default function Profile() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate("/home");
-    } catch (err) {
-      console.error("Logout error:", err?.message || err);
-      setMessage({ type: "error", text: "Failed to log out" });
-    }
-  };
-
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 flex items-center justify-center">
@@ -187,13 +177,6 @@ export default function Profile() {
         >
           BusEase
         </h1>
-        <button
-          onClick={handleLogout}
-          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold shadow-md hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-          aria-label="Logout"
-        >
-          Logout
-        </button>
       </header>
 
       <div className="relative z-10 max-w-2xl mx-auto px-4 md:px-6 pb-8">

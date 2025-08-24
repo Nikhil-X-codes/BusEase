@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, CreditCard, MapPin, Calendar, User, Users, Receipt } from "lucide-react";
+import { ArrowLeft, CreditCard, MapPin, Calendar, User, Users, Receipt,Bus, Armchair,Coins } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { createPayment } from "../services/payment.service";
+import { useAuth } from "../context/Authcontext"; 
 
 export default function Payment() {
   const navigate = useNavigate();
@@ -10,6 +11,8 @@ export default function Payment() {
   const bus = navState.bus || null;
   const selectedSeats = Array.isArray(navState.selectedSeats) ? navState.selectedSeats : [];
   const routeId = navState.routeId || null;
+  const  {user} = useAuth();
+  const selectedDate = navState.selectedDate;
 
   const [paymentData, setPaymentData] = useState({
     cardNumber: "",
@@ -19,31 +22,23 @@ export default function Payment() {
   });
   const [error, setError] = useState(null);
 
-  const bookingData = useMemo(() => {
-    const passengers = selectedSeats.map((s) => ({
-      name: s.passengerName || "Passenger",
-      seat: s.label,
-      seatType: s.type,
-      gender: s.gender || "N/A",
-    }));
-    return {
-      busName: bus?.busNumber || "Unknown Bus",
-      username: passengers[0]?.name || "Passenger",
-      date: bus?.date ? new Date(bus.date).toDateString() : new Date().toDateString(),
-      from: bus?.startLocation?.startLocation || "Unknown",
-      to: bus?.endLocation?.endLocation || "Unknown",
-      departureTime: bus?.date
-        ? new Date(bus.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-        : "--:--",
-      arrivalTime: bus?.date && bus?.totalDuration
-        ? new Date(new Date(bus.date).getTime() + bus.totalDuration * 60 * 1000).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : "--:--",
-      passengers,
-    };
-  }, [bus, selectedSeats]);
+const bookingData = useMemo(() => {
+  const username = user?.username || "Passenger";
+  const passengers = selectedSeats.map((s) => ({
+    name: s.passengerName || username,
+    seat: s.label,
+    seatType: s.type,
+    gender: s.gender || "N/A",
+  }));
+  return {
+    busName: bus?.busNumber || "Unknown Bus",
+    username, 
+    date: selectedDate ? new Date(selectedDate).toDateString() : (bus?.date ? new Date(bus.date).toDateString() : new Date().toDateString()),
+    from: bus?.startLocation?.startLocation || "Unknown",
+    to: bus?.endLocation?.endLocation || "Unknown",
+    passengers,
+  };
+}, [bus, selectedSeats, user, selectedDate]);
 
   const pricing = useMemo(() => {
     const seatPriceByNumber = new Map();
@@ -95,6 +90,7 @@ export default function Payment() {
       const resp = await createPayment({
         busId: bus?._id,
         seatNumbers,
+          selectedDate: selectedDate || bus?.date,
         cardDetails: {
           cardNumber: paymentData.cardNumber.replace(/\s/g, ""),
           cardHolderName: paymentData.cardName,
@@ -103,7 +99,7 @@ export default function Payment() {
         },
       });
       const payment = resp?.data?.data || null;
-      navigate("/success", { state: { bookingData, pricing, payment, bus, selectedSeats, routeId } });
+      navigate("/success", { state: { bookingData, pricing, payment, bus, selectedSeats, routeId, selectedDate } });
     } catch (e) {
       setError(e?.response?.data?.message || e?.message || "Payment failed");
     }
@@ -117,13 +113,17 @@ export default function Payment() {
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between mb-8">
         <button
-          onClick={() => navigate("/buses/" + bus?._id + "/seats?routeId=" + routeId)}
+          onClick={() =>
+            navigate("/buses/" + bus?._id + "/seats?routeId=" + routeId)
+          }
           className="flex items-center space-x-2 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full px-5 py-2 text-white hover:bg-white/30 transition-all duration-300"
         >
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm font-semibold">Back to Seat Selection</span>
         </button>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">BusEase</h1>
+        <h1 className="text-3xl font-extrabold text-white tracking-tight">
+          BusEase
+        </h1>
         <div className="bg-indigo-600 text-white px-5 py-2 rounded-full shadow-md">
           <span className="text-sm font-semibold">Secure Payment</span>
         </div>
@@ -133,15 +133,15 @@ export default function Payment() {
       <div className="relative z-10 flex justify-center mb-10">
         <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-full p-3 flex space-x-4">
           <div className="flex items-center space-x-3 px-5 py-2 rounded-full text-white/70 hover:bg-white/10 transition-all duration-300">
-            <Users className="w-5 h-5" />
+            <Bus className="w-5 h-5" />
             <span className="text-sm font-semibold">Select Bus</span>
           </div>
           <div className="flex items-center space-x-3 px-5 py-2 rounded-full text-white/70 hover:bg-white/10 transition-all duration-300">
-            <Users className="w-5 h-5" />
+            <Armchair className="w-5 h-5" />
             <span className="text-sm font-semibold">Select Seat</span>
           </div>
           <div className="flex items-center space-x-3 px-5 py-2 rounded-full bg-indigo-600 text-white shadow-md transition-all duration-300">
-            <Users className="w-5 h-5" />
+            <Coins className="w-5 h-5" />
             <span className="text-sm font-semibold">Payment</span>
           </div>
         </div>
@@ -149,10 +149,14 @@ export default function Payment() {
 
       {/* Main Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 pb-8">
-        {(!bus || selectedSeats.length === 0) ? (
+        {!bus || selectedSeats.length === 0 ? (
           <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 md:p-8 shadow-xl text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">No Booking Data Available</h2>
-            <p className="text-white/80 text-lg mb-6">Please select a bus and seats to proceed with payment.</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+              No Booking Data Available
+            </h2>
+            <p className="text-white/80 text-lg mb-6">
+              Please select a bus and seats to proceed with payment.
+            </p>
             <button
               onClick={() => navigate("/home")}
               className="inline-flex items-center space-x-2 bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold shadow-md hover:shadow-xl transition-all duration-300"
@@ -188,7 +192,8 @@ export default function Payment() {
                       <div className="w-12 h-8 bg-yellow-400/80 rounded"></div>
                       <div className="text-right">
                         <div className="text-sm font-semibold uppercase tracking-wider">
-                          {getCardBrand(paymentData.cardNumber).toUpperCase() || "CARD"}
+                          {getCardBrand(paymentData.cardNumber).toUpperCase() ||
+                            "CARD"}
                         </div>
                       </div>
                     </div>
@@ -197,12 +202,20 @@ export default function Payment() {
                     </div>
                     <div className="flex justify-between items-end">
                       <div>
-                        <div className="text-xs opacity-60 uppercase tracking-wide">Cardholder Name</div>
-                        <div className="font-medium uppercase truncate">{paymentData.cardName || "YOUR NAME"}</div>
+                        <div className="text-xs opacity-60 uppercase tracking-wide">
+                          Cardholder Name
+                        </div>
+                        <div className="font-medium uppercase truncate">
+                          {paymentData.cardName || "YOUR NAME"}
+                        </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs opacity-60 uppercase tracking-wide">Valid Thru</div>
-                        <div className="font-medium">{paymentData.expiryDate || "MM/YY"}</div>
+                        <div className="text-xs opacity-60 uppercase tracking-wide">
+                          Valid Thru
+                        </div>
+                        <div className="font-medium">
+                          {paymentData.expiryDate || "MM/YY"}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -212,13 +225,17 @@ export default function Payment() {
               {/* Card Input Form */}
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-white text-sm font-medium">Card Number</label>
+                  <label className="text-white text-sm font-medium">
+                    Card Number
+                  </label>
                   <div className="relative">
                     <input
                       type="text"
                       placeholder="1234 5678 9012 3456"
                       value={paymentData.cardNumber}
-                      onChange={(e) => handleInputChange("cardNumber", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("cardNumber", e.target.value)
+                      }
                       className="w-full px-4 py-3 pr-12 bg-white/90 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
                     />
                     <CreditCard className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -226,13 +243,17 @@ export default function Payment() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-white text-sm font-medium">Cardholder Name</label>
+                  <label className="text-white text-sm font-medium">
+                    Cardholder Name
+                  </label>
                   <div className="relative">
                     <input
                       type="text"
                       placeholder="John Doe"
                       value={paymentData.cardName}
-                      onChange={(e) => handleInputChange("cardName", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("cardName", e.target.value)
+                      }
                       className="w-full px-4 py-3 bg-white/90 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
                     />
                     <User className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -241,26 +262,34 @@ export default function Payment() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-white text-sm font-medium">Expiry Date</label>
+                    <label className="text-white text-sm font-medium">
+                      Expiry Date
+                    </label>
                     <div className="relative">
                       <input
                         type="text"
                         placeholder="MM/YY"
                         value={paymentData.expiryDate}
-                        onChange={(e) => handleInputChange("expiryDate", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("expiryDate", e.target.value)
+                        }
                         className="w-full px-4 py-3 bg-white/90 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
                       />
                       <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-white text-sm font-medium">CVV</label>
+                    <label className="text-white text-sm font-medium">
+                      CVV
+                    </label>
                     <div className="relative">
                       <input
                         type="text"
                         placeholder="123"
                         value={paymentData.cvv}
-                        onChange={(e) => handleInputChange("cvv", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("cvv", e.target.value)
+                        }
                         className="w-full px-4 py-3 bg-white/90 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
                       />
                       <CreditCard className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -268,7 +297,11 @@ export default function Payment() {
                   </div>
                 </div>
 
-                {error && <p className="text-red-300 text-center text-sm font-medium">{error}</p>}
+                {error && (
+                  <p className="text-red-300 text-center text-sm font-medium">
+                    {error}
+                  </p>
+                )}
 
                 <button
                   onClick={handlePayment}
@@ -282,14 +315,18 @@ export default function Payment() {
 
             {/* Booking Summary */}
             <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 md:p-8 shadow-xl">
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">Booking Summary</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">
+                Booking Summary
+              </h2>
 
               <div className="space-y-6">
                 <div className="flex items-center space-x-3 p-4 bg-white/5 rounded-lg">
                   <User className="w-5 h-5 text-indigo-300" />
                   <div>
                     <div className="text-white/60 text-sm">Booked By</div>
-                    <div className="text-white font-medium">{bookingData.username}</div>
+                    <div className="text-white font-medium">
+                      {bookingData.username}
+                    </div>
                   </div>
                 </div>
 
@@ -297,7 +334,9 @@ export default function Payment() {
                   <Calendar className="w-5 h-5 text-indigo-300" />
                   <div>
                     <div className="text-white/60 text-sm">Travel Date</div>
-                    <div className="text-white font-medium">{bookingData.date}</div>
+                    <div className="text-white font-medium">
+                      {bookingData.date}
+                    </div>
                   </div>
                 </div>
 
@@ -306,14 +345,18 @@ export default function Payment() {
                     <MapPin className="w-5 h-5 text-green-400" />
                     <div>
                       <div className="text-white/60 text-sm">From</div>
-                      <div className="text-white font-medium">{bookingData.from}</div>
+                      <div className="text-white font-medium">
+                        {bookingData.from}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3 p-4 bg-white/5 rounded-lg">
                     <MapPin className="w-5 h-5 text-red-400" />
                     <div>
                       <div className="text-white/60 text-sm">To</div>
-                      <div className="text-white font-medium">{bookingData.to}</div>
+                      <div className="text-white font-medium">
+                        {bookingData.to}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -321,12 +364,27 @@ export default function Payment() {
                 <div className="p-4 bg-white/5 rounded-lg">
                   <div className="flex items-center space-x-2 mb-3">
                     <Users className="w-5 h-5 text-indigo-300" />
-                    <div className="text-white/60 text-sm">Passengers & Seats</div>
+                    <div className="text-white/60 text-sm">
+                      Passengers & Seats
+                    </div>
                   </div>
                   <div className="space-y-2">
                     {bookingData.passengers.map((passenger, index) => (
-                      <div key={index} className="flex justify-between items-center">
-                        <span className="text-white">{passenger.name} ({passenger.gender})</span>
+                      <div
+                        key={index}
+                        className="flex justify-between items-center"
+                      >
+                        <span className="text-white">
+                          {passenger.name
+                            ? passenger.name.charAt(0).toUpperCase() +
+                              passenger.name.slice(1)
+                            : ""}{" "}
+                          (
+                          {passenger.gender
+                            ? passenger.gender.charAt(0).toUpperCase()
+                            : ""}
+                          )
+                        </span>
                         <div className="flex items-center space-x-2">
                           <span
                             className={`px-2 py-1 rounded-full text-xs ${
@@ -354,23 +412,37 @@ export default function Payment() {
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-white/80">Subtotal</span>
-                      <span className="text-white">₹{pricing.subtotal.toLocaleString()}</span>
+                      <span className="text-white">
+                        ₹{pricing.subtotal.toLocaleString()}
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/80">Service Fee ({selectedSeats.length} tickets)</span>
-                      <span className="text-white">₹{pricing.serviceFee.toLocaleString()}</span>
+                      <span className="text-white/80">
+                        Service Fee ({selectedSeats.length} tickets)
+                      </span>
+                      <span className="text-white">
+                        ₹{pricing.serviceFee.toLocaleString()}
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/80">Convenience Fee (2%)</span>
-                      <span className="text-white">₹{pricing.convenienceFee.toLocaleString()}</span>
+                      <span className="text-white/80">
+                        Convenience Fee (2%)
+                      </span>
+                      <span className="text-white">
+                        ₹{pricing.convenienceFee.toLocaleString()}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/80">GST (12%)</span>
-                      <span className="text-white">₹{pricing.gstAmount.toLocaleString()}</span>
+                      <span className="text-white">
+                        ₹{pricing.gstAmount.toLocaleString()}
+                      </span>
                     </div>
                     <div className="border-t border-white/20 pt-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-white font-semibold text-lg">Total Amount</span>
+                        <span className="text-white font-semibold text-lg">
+                          Total Amount
+                        </span>
                         <span className="text-2xl font-bold text-indigo-400">
                           ₹{pricing.total.toLocaleString()}
                         </span>

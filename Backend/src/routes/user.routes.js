@@ -9,7 +9,7 @@ import {registeruser,
     refreshAccessToken,
     sendPasswordResetOTP,
     resetPasswordWithOTP,
-  BookingHistory} from '../Controllers/user.controller.js';
+} from '../Controllers/user.controller.js';
 
 const userRouter = Router();
 
@@ -22,7 +22,6 @@ userRouter.put('/update', verifyJWT, updateProfile);
 userRouter.post('/refresh-token', verifyJWT,refreshAccessToken);
 userRouter.post('/send-password-reset-otp', verifyJWT,sendPasswordResetOTP);
 userRouter.post('/reset-password-with-otp', verifyJWT,resetPasswordWithOTP);
-userRouter.get('/booking-history', verifyJWT, BookingHistory);
 
 
 export default userRouter;

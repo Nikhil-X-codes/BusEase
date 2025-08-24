@@ -5,13 +5,12 @@ import ApiResponse from '../utils/ApiResponse.js';
 
 
 const createRoute = asyncHandler(async (req, res) => {
-  const { startLocation, endLocation, date, totalDistance = 0, totalDuration = 0 } = req.body;
+  const { startLocation, endLocation, date, totalDistance, totalDuration } = req.body;
 
-  if (!startLocation || !endLocation || !date) {
-    throw new ApiError(400, "Start location, end location, and date are required");
+  if (!startLocation || !endLocation || !date || !totalDistance || !totalDuration) {
+    throw new ApiError(400, "Start location, end location, date, totalDistance, and totalDuration are required");
   }
 
-  // Case-insensitive check for existing route
   const routeExists = await Route.findOne({
     startLocation: { $regex: `^${startLocation}$`, $options: "i" },
     endLocation: { $regex: `^${endLocation}$`, $options: "i" },
@@ -28,25 +27,14 @@ const createRoute = asyncHandler(async (req, res) => {
     date: new Date(date),
     totalDistance: Number(totalDistance),
     totalDuration: Number(totalDuration),
-    buses: [], // Initialize empty buses array
+    buses: [],
   });
 
-  if (route) {
-    res.status(201).json(
-      new ApiResponse(201, "Route created successfully", {
-        _id: route._id,
-        startLocation: route.startLocation,
-        endLocation: route.endLocation,
-        date: route.date,
-        totalDistance: route.totalDistance,
-        totalDuration: route.totalDuration,
-        buses: route.buses,
-      })
-    );
-  } else {
-    throw new ApiError(400, "Invalid route data");
-  }
+  res.status(201).json(
+    new ApiResponse(201, "Route created successfully", route)
+  );
 });
+
 
 const getroutes = asyncHandler(async (req, res) => {
   const routes = await Route.find({})

@@ -99,11 +99,13 @@ export default function WatchHistory() {
                       <div>
                         <h3 className="text-lg font-semibold text-white">{p.bus?.busNumber || "Unknown Bus"}</h3>
                         <p className="text-sm text-white/60">
-                          Booking ID: {p._id.slice(-8).toUpperCase()}
+                          Payment ID: {p._id}
                         </p>
                       </div>
                       <div className="text-sm text-white/80">
-                        {new Date(p.createdAt).toLocaleString("en-IN", {
+                        {new Date(
+                           p.createdAt
+                        ).toLocaleString("en-IN", {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}
@@ -127,7 +129,9 @@ export default function WatchHistory() {
                           <div>
                             <span className="text-white/60 text-sm">Travel Date</span>
                             <div className="text-white font-medium">
-                              {new Date(p.createdAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}
+                              {p.selectedDate || p.bus?.date
+                                ? new Date(p.selectedDate || p.bus?.date).toLocaleDateString("en-IN", { dateStyle: "medium" })
+                                : "Unknown"}
                             </div>
                           </div>
                         </div>
