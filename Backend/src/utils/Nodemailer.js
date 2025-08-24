@@ -1,11 +1,8 @@
 import { totp } from 'otplib';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
-import ApiError from "../utils/ApiError.js";
-import ApiResponse from "../utils/Apiresponse.js";
 import  User from '../models/User.model.js';
 
-// Configure email transporter
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -14,12 +11,11 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// Generate random 6-digit OTP
+
 const generateOTP = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Send OTP email
 const sendOTPEmail = async (email, otp) => {
     const mailOptions = {
         from: process.env.EMAIL_USER,
@@ -44,5 +40,4 @@ const sendOTPEmail = async (email, otp) => {
 export {
     generateOTP,
     sendOTPEmail,
-    transporter
 }
