@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 import User from "../models/User.model.js";
 import { generateOTP,
     sendOTPEmail,
-    transporter} 
+} 
     
     from "../utils/Nodemailer.js";
 

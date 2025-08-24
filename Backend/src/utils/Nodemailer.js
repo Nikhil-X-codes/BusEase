@@ -1,7 +1,7 @@
 import { totp } from 'otplib';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
-import  User from '../models/User.model.js';
+
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
