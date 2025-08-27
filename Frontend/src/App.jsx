@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/Authcontext';
+import { useEffect } from 'react';
 import Auth from './pages/auth';
 import ForgetPassword from './components/Forgetpassword';
 import Home from './pages/Home';
@@ -10,6 +11,22 @@ import Profile from './pages/Profile';
 import WatchHistory from './pages/WatchHistory';
 
 const App = () => {
+  useEffect(() => {
+    const API_BASE = import.meta.env.VITE_BASE_URL;
+    if (!API_BASE) return;
+    let isCancelled = false;
+    const warmup = () => {
+      fetch(`${API_BASE}/` , { credentials: 'include' }).catch(() => {});
+    };
+    warmup();
+    const id = setInterval(() => {
+      if (!isCancelled) warmup();
+    }, 5 * 60 * 1000);
+    return () => {
+      isCancelled = true;
+      clearInterval(id);
+    };
+  }, []);
   return (
     <Router>
       <AuthProvider>

@@ -4,6 +4,17 @@ import cookieParser from 'cookie-parser';
 
 const app = express();
 
+// Lightweight response time logging
+app.use((req, res, next) => {
+    const startTimeNs = process.hrtime.bigint();
+    res.on('finish', () => {
+        const durationMs = Number(process.hrtime.bigint() - startTimeNs) / 1e6;
+        const route = req.originalUrl || req.url;
+        console.log(`[RESPTIME] ${req.method} ${route} -> ${res.statusCode} in ${durationMs.toFixed(1)}ms`);
+    });
+    next();
+});
+
 app.use(cors({
     origin: process.env.CORS_ORIGIN,
     credentials: true,

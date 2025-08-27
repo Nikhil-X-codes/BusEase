@@ -13,6 +13,7 @@ import { generateOTP,
 
 
 const registeruser = asynchandler(async (req,res) => {
+    const startTimeNs = process.hrtime.bigint();
 
     const { username, email, password } = req.body;
 
@@ -20,44 +21,61 @@ const registeruser = asynchandler(async (req,res) => {
         return res.status(400).json({ message: "All fields are required" });
     }
 
+    const findStart = process.hrtime.bigint();
     const existingUser = await User.findOne({ email });
+    const findMs = Number(process.hrtime.bigint() - findStart) / 1e6;
     if (existingUser) {
         return res.status(409).json({ message: "User already exists" });
     }
 
+    const createStart = process.hrtime.bigint();
     const newUser = await User.create({
         username: username,
         email,
         password,
     });
+    const createMs = Number(process.hrtime.bigint() - createStart) / 1e6;
 
     if (!newUser) {
         throw new ApiError(500, "Failed to create user");
     }
 
+    const totalMs = Number(process.hrtime.bigint() - startTimeNs) / 1e6;
+    console.log(`[AUTH][REGISTER] email=${email} findMs=${findMs.toFixed(1)} createMs=${createMs.toFixed(1)} totalMs=${totalMs.toFixed(1)}`);
     return res.status(201).json(new ApiResponse(201, "User registered successfully", newUser));
 })
 
 const loginuser = asynchandler(async (req, res) => {                                   
+    const startTimeNs = process.hrtime.bigint();
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: "Email and password are required" });
     }
+    const findStart = process.hrtime.bigint();
     const existinguser = await User.findOne({ email });
+    const findMs = Number(process.hrtime.bigint() - findStart) / 1e6;
 
     if (!existinguser) {
         return registeruser(req, res); 
     }
 
+    const bcryptStart = process.hrtime.bigint();
     const isPasswordValid = await existinguser.isPasswordmatch(password);
+    const bcryptMs = Number(process.hrtime.bigint() - bcryptStart) / 1e6;
 
     if (!isPasswordValid) {
         throw new ApiError(401, "Invalid email or password");
     }
 
+    const tokenStart = process.hrtime.bigint();
     const {accessToken,refreshToken } = await generateAccessAndRefreshTokens(existinguser._id);
+    const tokenMs = Number(process.hrtime.bigint() - tokenStart) / 1e6;
 
-    const loggedInUser = await User.findById(existinguser._id).select("-password -refreshToken");
+    const profileStart = process.hrtime.bigint();
+    const loggedInUser = existinguser.toObject();
+    delete loggedInUser.password;
+    delete loggedInUser.refreshToken;
+    const profileMs = Number(process.hrtime.bigint() - profileStart) / 1e6;
 
     const options = {
         httpOnly: true,
@@ -65,6 +83,8 @@ const loginuser = asynchandler(async (req, res) => {
         sameSite: 'none'
     };
 
+    const totalMs = Number(process.hrtime.bigint() - startTimeNs) / 1e6;
+    console.log(`[AUTH][LOGIN] email=${email} findMs=${findMs.toFixed(1)} bcryptMs=${bcryptMs.toFixed(1)} tokenMs=${tokenMs.toFixed(1)} profileMs=${profileMs.toFixed(1)} totalMs=${totalMs.toFixed(1)}`);
     return res
         .status(200)
         .cookie("accessToken", accessToken, options)
