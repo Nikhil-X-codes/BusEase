@@ -22,7 +22,7 @@ const registeruser = asynchandler(async (req,res) => {
     }
 
     const findStart = process.hrtime.bigint();
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email }).lean().select('_id');
     const findMs = Number(process.hrtime.bigint() - findStart) / 1e6;
     if (existingUser) {
         return res.status(409).json({ message: "User already exists" });
@@ -184,7 +184,7 @@ const updateProfile = asynchandler(async (req, res) => {
         const existingUser = await User.findOne({ 
             email: email,
             _id: { $ne: req.user._id }
-        });
+        }).lean().select('_id');
         
         if (existingUser) {
             return res.status(409).json({ message: "Email already exists" });
@@ -278,7 +278,7 @@ const sendPasswordResetOTP = asynchandler(async (req, res) => {
         return res.status(400).json({ message: "Email is required" });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select('_id email resetPasswordOTP resetPasswordOTPExpires');
     
     if (!user) {
         throw new ApiError(404, "User with this email does not exist");

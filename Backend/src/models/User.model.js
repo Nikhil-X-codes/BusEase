@@ -21,7 +21,8 @@ const userschema=new Schema({
     required: [true, 'Password is required']
   },
   refreshToken: {
-    type: String
+    type: String,
+    index: true
   },
   gender:{
     type: String,
@@ -36,12 +37,19 @@ const userschema=new Schema({
 
 },{
     timestamps: true,
-})
+});
+
+// Compound index for email lookups (most common query)
+userschema.index({ email: 1 }, { unique: true });
+
+// Index for OTP-based password reset queries
+userschema.index({ resetPasswordOTPExpires: 1 }, { sparse: true });
+userschema.index({ email: 1, resetPasswordOTP: 1, resetPasswordOTPExpires: 1 }, { sparse: true });
 
 userschema.pre("save",async function(next){                                      
                                                                        
     if(this.isModified("password")){
-        this.password=await bcrypt.hash(this.password,10);                         
+        this.password=await bcrypt.hash(this.password,12);                         
     }
     next();
 })
