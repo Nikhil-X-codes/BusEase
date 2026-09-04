@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # 🚌 BusEase – Modern Bus Ticket Booking Platform
+=======
+# 🚌 BusEase – Your Easy Bus Booking Companion (Live only at :- https://bus-ease-omega.vercel.app)
+>>>>>>> 1e531886c1b9f4f5f622d66b55d6756e5182ccf9
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-bus--ease--beta.vercel.app-06b6d4?style=for-the-badge&logo=vercel)](https://bus-ease-beta.vercel.app)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js)](https://nodejs.org)
