@@ -5,21 +5,7 @@ let connectPromise;
 let redisAvailable = false;
 let lastLoggedErrorTime = 0;
 
-// High-speed in-memory store fallback for local development when external Redis is not running
-const memoryStore = new Map();
-const memoryExpiries = new Map();
-
-const isExpired = (key) => {
-  const expiry = memoryExpiries.get(key);
-  if (expiry && Date.now() > expiry) {
-    memoryStore.delete(key);
-    memoryExpiries.delete(key);
-    return true;
-  }
-  return false;
-};
-
-const getRedisClient = async () => {
+export const getRedisClient = async () => {
   if (!process.env.REDIS_URL) return null;
   if (!client) {
     client = createClient({
@@ -49,7 +35,7 @@ const getRedisClient = async () => {
       const now = Date.now();
       if (now - lastLoggedErrorTime > 60000) {
         lastLoggedErrorTime = now;
-        console.log(`[REDIS] Local Dev Notice: ${error.message}. (Using high-speed in-memory cache fallback)`);
+        console.error(`[REDIS] Connection error: ${error.message}`);
       }
     });
   }
@@ -71,12 +57,11 @@ export const redisGet = async (key) => {
   try {
     const redis = await getRedisClient();
     if (redis) return await redis.get(key);
-  } catch {
+  } catch (error) {
     redisAvailable = false;
+    console.error(`[REDIS] Error getting key "${key}":`, error.message);
   }
-  // In-memory fallback
-  if (isExpired(key)) return null;
-  return memoryStore.has(key) ? memoryStore.get(key) : null;
+  return null;
 };
 
 export const redisDel = async (...keys) => {
@@ -84,41 +69,36 @@ export const redisDel = async (...keys) => {
     const redis = await getRedisClient();
     if (redis && keys.length) {
       await redis.del(keys);
-      return;
     }
-  } catch {
+  } catch (error) {
     redisAvailable = false;
-  }
-  // In-memory fallback
-  for (const k of keys) {
-    memoryStore.delete(k);
-    memoryExpiries.delete(k);
+    console.error(`[REDIS] Error deleting keys:`, error.message);
   }
 };
 
 export const redisEval = async (script, options) => {
-  const redis = await getRedisClient();
-  if (!redis) return null;
-  return redis.eval(script, options);
+  try {
+    const redis = await getRedisClient();
+    if (!redis) return null;
+    return await redis.eval(script, options);
+  } catch (error) {
+    redisAvailable = false;
+    console.error(`[REDIS] Error evaluating script:`, error.message);
+    return null;
+  }
 };
 
 export const redisSet = async (key, value, options = {}) => {
   try {
     const redis = await getRedisClient();
     if (redis) {
-      await redis.set(key, value, options);
-      return;
+      return await redis.set(key, value, options);
     }
-  } catch {
+  } catch (error) {
     redisAvailable = false;
+    console.error(`[REDIS] Error setting key "${key}":`, error.message);
   }
-  // In-memory fallback
-  memoryStore.set(key, String(value));
-  if (options.EX) {
-    memoryExpiries.set(key, Date.now() + options.EX * 1000);
-  } else if (options.PX) {
-    memoryExpiries.set(key, Date.now() + options.PX);
-  }
+  return null;
 };
 
 export const redisDeletePattern = async (pattern) => {
@@ -126,20 +106,14 @@ export const redisDeletePattern = async (pattern) => {
     const redis = await getRedisClient();
     if (redis) {
       const keys = [];
-      for await (const key of redis.scanIterator({ MATCH: pattern, COUNT: 100 })) keys.push(key);
+      for await (const key of redis.scanIterator({ MATCH: pattern, COUNT: 100 })) {
+        keys.push(key);
+      }
       if (keys.length) await redis.del(keys);
-      return;
     }
-  } catch {
+  } catch (error) {
     redisAvailable = false;
-  }
-  // In-memory fallback pattern match
-  const regex = new RegExp(`^${pattern.replace(/\*/g, ".*")}$`);
-  for (const k of memoryStore.keys()) {
-    if (regex.test(k)) {
-      memoryStore.delete(k);
-      memoryExpiries.delete(k);
-    }
+    console.error(`[REDIS] Error deleting pattern "${pattern}":`, error.message);
   }
 };
 
@@ -151,15 +125,9 @@ export const redisIncrement = async (key, ttlSeconds = 3600) => {
       if (count === 1) await redis.expire(key, ttlSeconds);
       return count;
     }
-  } catch {
+  } catch (error) {
     redisAvailable = false;
+    console.error(`[REDIS] Error incrementing key "${key}":`, error.message);
   }
-  // In-memory fallback
-  if (isExpired(key)) memoryStore.delete(key);
-  const current = Number(memoryStore.get(key) || 0) + 1;
-  memoryStore.set(key, String(current));
-  if (current === 1) {
-    memoryExpiries.set(key, Date.now() + ttlSeconds * 1000);
-  }
-  return current;
+  return 0;
 };

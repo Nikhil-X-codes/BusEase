@@ -1,22 +1,33 @@
 import { redisDeletePattern, redisGet, redisIncrement, redisSet } from "./redis.js";
 
-const safeKeyPart = (value) => encodeURIComponent(String(value).trim().toLowerCase());
+const safeKeyPart = (value) => encodeURIComponent(String(value || "").trim().toLowerCase());
 
 export const searchCacheKey = (origin, destination, date) =>
-  `cache:search:${safeKeyPart(origin)}:${safeKeyPart(destination)}:${date}`;
+  `cache:search:${safeKeyPart(origin)}:${safeKeyPart(destination)}:${safeKeyPart(date)}`;
 
 export const getCached = async (key) => {
-  const value = await redisGet(key);
-  await redisIncrement(value ? "cache:metrics:hits" : "cache:metrics:misses");
-  if (!value) return null;
   try {
+    const value = await redisGet(key);
+    await redisIncrement(value ? "cache:metrics:hits" : "cache:metrics:misses");
+    if (!value) return null;
     return JSON.parse(value);
   } catch {
     return null;
   }
 };
 
-export const setCached = (key, value, ttlSeconds) =>
-  redisSet(key, JSON.stringify(value), { EX: ttlSeconds });
+export const setCached = async (key, value, ttlSeconds = 300) => {
+  try {
+    return await redisSet(key, JSON.stringify(value), { EX: ttlSeconds });
+  } catch {
+    return null;
+  }
+};
 
-export const invalidateSearchCache = () => redisDeletePattern("cache:search:*");
+export const invalidateSearchCache = async () => {
+  try {
+    return await redisDeletePattern("cache:search:*");
+  } catch {
+    return null;
+  }
+};

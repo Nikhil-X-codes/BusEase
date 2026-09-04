@@ -23,6 +23,12 @@ export const searchBuses = asyncHandler(async (req, res) => {
   const today = startOfUtcDay(new Date());
   if (travelDate < today) throw new ApiError(400, "Travel date cannot be in the past");
 
+  const cacheKey = searchCacheKey(origin, destination, req.query.date);
+  const cachedResults = await getCached(cacheKey);
+  if (cachedResults) {
+    return res.json(new ApiResponse(200, "Buses found", cachedResults));
+  }
+
   const nextDate = new Date(travelDate);
   nextDate.setUTCDate(nextDate.getUTCDate() + 1);
 
@@ -105,5 +111,6 @@ export const searchBuses = asyncHandler(async (req, res) => {
     }
   }
 
+  await setCached(cacheKey, results, 300);
   res.json(new ApiResponse(200, "Buses found", results));
 });

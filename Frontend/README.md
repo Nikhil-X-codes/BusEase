@@ -109,23 +109,23 @@ npm run preview
 
 ```mermaid
 flowchart TD
-    User([User Browser]) --> AuthContext[AuthContext Provider]
-    AuthContext --> ProtectedRoute{Route Guard}
+    User(["User Browser"]) --> AuthContext["AuthContext Provider"]
+    AuthContext --> ProtectedRoute{"Route Guard"}
     
-    ProtectedRoute -->|Guest Only| AuthPage[auth.jsx]
-    ProtectedRoute -->|Public/Auth| HomePage[Home.jsx]
-    ProtectedRoute -->|Auth Required| SeatPage[Seatselection.jsx]
-    ProtectedRoute -->|Auth Required| PaymentPage[payment.jsx]
-    ProtectedRoute -->|Auth Required| SuccessPage[paymentsuccess.jsx]
-    ProtectedRoute -->|Auth Required| HistoryPage[WatchHistory.jsx]
-    ProtectedRoute -->|Admin Required| AdminDashboard[AdminDashboard.jsx]
+    ProtectedRoute -->|"Guest Only"| AuthPage["auth.jsx"]
+    ProtectedRoute -->|"Public / Auth"| HomePage["Home.jsx"]
+    ProtectedRoute -->|"Auth Required"| SeatPage["Seatselection.jsx"]
+    ProtectedRoute -->|"Auth Required"| PaymentPage["payment.jsx"]
+    ProtectedRoute -->|"Auth Required"| SuccessPage["paymentsuccess.jsx"]
+    ProtectedRoute -->|"Auth Required"| HistoryPage["WatchHistory.jsx"]
+    ProtectedRoute -->|"Admin Required"| AdminDashboard["AdminDashboard.jsx"]
     
-    AuthPage -->|auth.service.js| BackendAPI[(Backend Express API)]
-    HomePage -->|book.service.js| BackendAPI
-    SeatPage -->|book.service.js| BackendAPI
-    PaymentPage -->|payment.service.js| BackendAPI
-    SuccessPage -->|payment.service.js (PDF Download)| BackendAPI
-    AdminDashboard -->|admin.service.js| BackendAPI
+    AuthPage -->|"auth.service.js"| BackendAPI[("Backend Express API")]
+    HomePage -->|"book.service.js"| BackendAPI
+    SeatPage -->|"book.service.js"| BackendAPI
+    PaymentPage -->|"payment.service.js"| BackendAPI
+    SuccessPage -->|"payment.service.js (PDF Download)"| BackendAPI
+    AdminDashboard -->|"admin.service.js"| BackendAPI
 ```
 
 1. **Authentication Session:** `AuthContext` queries `GET /users/current-user` on app load to restore user state via secure HTTP-only cookies.

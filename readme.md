@@ -1,14 +1,11 @@
-<<<<<<< HEAD
 # 🚌 BusEase – Modern Bus Ticket Booking Platform
-=======
 # 🚌 BusEase – Your Easy Bus Booking Companion (Live only at :- https://bus-ease-omega.vercel.app)
->>>>>>> 1e531886c1b9f4f5f622d66b55d6756e5182ccf9
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-bus--ease--beta.vercel.app-06b6d4?style=for-the-badge&logo=vercel)](https://bus-ease-beta.vercel.app)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js)](https://nodejs.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?style=for-the-badge&logo=mongodb)](https://www.mongodb.com)
-[![Redis](https://img.shields.io/badge/Redis-Optional%20%2F%20Caching-DC382D?style=for-the-badge&logo=redis)](https://redis.io)
+[![Redis](https://img.shields.io/badge/Redis%20%2F%20Caching-DC382D?style=for-the-badge&logo=redis)](https://redis.io)
 
 **BusEase** is a full-stack, enterprise-grade bus ticket booking web application designed for seamless trip discovery, visual seat reservation, simulated payment processing, and automated ticket generation. Built with a high-performance MERN architecture, BusEase provides a modern responsive user interface paired with a secure, scalable backend.
 
@@ -295,8 +292,5 @@ BusEase includes a dedicated frontend end-to-end testing suite guide.
 
 ---
 
-## 📄 License
-
-This project is licensed under the **ISC License**. Feel free to use and contribute!
 
 

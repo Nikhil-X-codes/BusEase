@@ -324,6 +324,7 @@ const updateSeatAvailability = asyncHandler(async (req, res) => {
     if (seat) {
       seat.isAvailable = req.body.isAvailable !== undefined ? req.body.isAvailable : seat.isAvailable;
       const updatedBus = await bus.save();
+      await invalidateSearchCache();
       res.json(new ApiResponse(200, 'Seat availability updated successfully', updatedBus));
     } else {
       throw new ApiError(404, 'Seat not found');
