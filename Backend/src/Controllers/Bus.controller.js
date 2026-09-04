@@ -4,10 +4,16 @@ import Route from '../models/Routes.model.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import mongoose from 'mongoose';
+import { cleanText, escapeRegex, isValidObjectId } from '../utils/validation.js';
+import { ensureRollingInventoryForBus } from '../utils/tripInventory.js';
+import { invalidateSearchCache } from '../utils/cache.js';
 
 
 const createBus = asyncHandler(async (req, res) => {
-  const { busNumber, amenities, Seats, startLocationName, endLocationName } = req.body;
+  const busNumber = cleanText(req.body.busNumber, 40);
+  const startLocationName = cleanText(req.body.startLocationName, 100);
+  const endLocationName = cleanText(req.body.endLocationName, 100);
+  const { amenities, Seats } = req.body;
 
   if (!busNumber || !Seats || !Array.isArray(Seats) || !startLocationName || !endLocationName) {
     throw new ApiError(400, "Bus number, seats (array), startLocationName, and endLocationName are required");
@@ -32,7 +38,7 @@ const createBus = asyncHandler(async (req, res) => {
 
   const busExists = await Bus.findOne({ busNumber });
   if (busExists) {
-    throw new ApiError(400, "Bus with this number already exists");
+    throw new ApiError(409, "Bus with this number already exists");
   }
 
   const session = await mongoose.startSession();
@@ -42,8 +48,8 @@ const createBus = asyncHandler(async (req, res) => {
 
     let route = await Route.findOne(
       {
-        startLocation: { $regex: `^${startLocationName}$`, $options: "i" },
-        endLocation: { $regex: `^${endLocationName}$`, $options: "i" },
+        startLocation: { $regex: `^${escapeRegex(startLocationName)}$`, $options: "i" },
+        endLocation: { $regex: `^${escapeRegex(endLocationName)}$`, $options: "i" },
       },
       null,
       { session }
@@ -75,6 +81,8 @@ if (!route) {
       .session(session);
 
     await session.commitTransaction();
+    await ensureRollingInventoryForBus(bus[0]);
+    await invalidateSearchCache();
 
     if (populatedBus) {
       res.status(201).json(
@@ -100,33 +108,91 @@ if (!route) {
 });
 
 const getBuses = asyncHandler(async (req, res) => {
+  res.set("Cache-Control", "private, no-cache");
   const buses = await Bus.find({})
-    .select("-amenities -Seats")
     .populate({
       path: "startLocation endLocation",
       select: "startLocation endLocation totalDistance totalDuration",
-    });
+    })
+    .lean();
 
-  res.json(new ApiResponse(200, "Buses retrieved successfully", buses));
+  const Payment = (await import("../models/Payment.model.js")).default;
+  const confirmedPayments = await Payment.find({
+    status: "confirmed",
+  }).select("bus seats").lean();
+
+  const bookedSeatsByBus = new Map();
+  confirmedPayments.forEach((p) => {
+    const bId = String(p.bus);
+    if (!bookedSeatsByBus.has(bId)) bookedSeatsByBus.set(bId, new Set());
+    (p.seats || []).forEach((s) => {
+      if (s?.seatNumber) bookedSeatsByBus.get(bId).add(String(s.seatNumber).trim().toUpperCase());
+    });
+  });
+
+  const enrichedBuses = buses.map((bus) => {
+    const bookedSet = bookedSeatsByBus.get(String(bus._id)) || new Set();
+    const availableSeats = (bus.Seats || []).filter((s) => {
+      const num = String(s.SeatNumber).trim().toUpperCase();
+      return s.isAvailable !== false && !bookedSet.has(num);
+    }).length;
+    return {
+      ...bus,
+      availableSeats,
+    };
+  });
+
+  res.json(new ApiResponse(200, "Buses retrieved successfully", enrichedBuses));
 });
 
 const getBusById = asyncHandler(async (req, res) => {
+  res.set("Cache-Control", "private, no-cache");
+  if (!isValidObjectId(req.params.id)) throw new ApiError(400, "Invalid bus ID");
   const bus = await Bus.findById(req.params.id).populate({
     path: "startLocation endLocation",
     select: "startLocation endLocation totalDistance totalDuration",
-  });
+  }).lean();
 
-  if (bus) {
-    res.json(new ApiResponse(200, "Bus retrieved successfully", bus));
-  } else {
+  if (!bus) {
     throw new ApiError(404, "Bus not found");
   }
+
+  // Cross-reference ALL confirmed bookings for this bus (irrespective of date)
+  const Payment = (await import("../models/Payment.model.js")).default;
+  const confirmedPayments = await Payment.find({
+    bus: req.params.id,
+    status: "confirmed",
+  }).select("seats").lean();
+
+  const bookedSeatSet = new Set();
+  confirmedPayments.forEach((p) => {
+    (p.seats || []).forEach((s) => {
+      if (s?.seatNumber) bookedSeatSet.add(String(s.seatNumber).trim().toUpperCase());
+    });
+  });
+
+  if (Array.isArray(bus.Seats)) {
+    bus.Seats = bus.Seats.map((seat) => {
+      const seatNum = String(seat.SeatNumber).trim().toUpperCase();
+      const isBooked = seat.isAvailable === false || bookedSeatSet.has(seatNum);
+      return {
+        ...seat,
+        isAvailable: !isBooked,
+      };
+    });
+  }
+
+  res.json(new ApiResponse(200, "Bus retrieved successfully", bus));
 });
 
 
 const updateBus = asyncHandler(async (req, res) => {
-  const { busNumber, amenities, Seats, startLocationName, endLocationName } = req.body;
+  const busNumber = req.body.busNumber === undefined ? undefined : cleanText(req.body.busNumber, 40);
+  const startLocationName = req.body.startLocationName === undefined ? undefined : cleanText(req.body.startLocationName, 100);
+  const endLocationName = req.body.endLocationName === undefined ? undefined : cleanText(req.body.endLocationName, 100);
+  const { amenities, Seats } = req.body;
   const busId = req.params.id;
+  if (!isValidObjectId(busId)) throw new ApiError(400, "Invalid bus ID");
 
   // Find the bus
   const bus = await Bus.findById(busId);
@@ -143,7 +209,7 @@ const updateBus = asyncHandler(async (req, res) => {
 if (busNumber && busNumber !== bus.busNumber) {
   const busExists = await Bus.findOne({ busNumber }).session(session);
   if (busExists) {
-    throw new ApiError(400, "Bus with this number already exists");
+    throw new ApiError(409, "Bus with this number already exists");
   }
   bus.busNumber = busNumber;
 }
@@ -182,8 +248,8 @@ if (busNumber && busNumber !== bus.busNumber) {
     if (startLocationName && endLocationName) {
       let route = await Route.findOne(
         {
-          startLocation: { $regex: `^${startLocationName}$`, $options: "i" },
-          endLocation: { $regex: `^${endLocationName}$`, $options: "i" },
+          startLocation: { $regex: `^${escapeRegex(startLocationName)}$`, $options: "i" },
+          endLocation: { $regex: `^${escapeRegex(endLocationName)}$`, $options: "i" },
         },
         null,
         { session }
@@ -219,6 +285,7 @@ if (busNumber && busNumber !== bus.busNumber) {
 
     // Commit the transaction
     await session.commitTransaction();
+    await invalidateSearchCache();
 
     res.json(new ApiResponse(200, "Bus updated successfully", populatedBus));
   } catch (error) {
@@ -231,10 +298,12 @@ if (busNumber && busNumber !== bus.busNumber) {
 
 
 const deleteBus = asyncHandler(async (req, res) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(400, "Invalid bus ID");
   const bus = await Bus.findById(req.params.id);
 
   if (bus) {
     await bus.deleteOne();
+    await invalidateSearchCache();
     res.json(new ApiResponse(200, "Bus deleted successfully", { _id: req.params.id }));
   } else {
     throw new ApiError(404, "Bus not found");
@@ -243,6 +312,8 @@ const deleteBus = asyncHandler(async (req, res) => {
 
 
 const updateSeatAvailability = asyncHandler(async (req, res) => {                                          
+  if (!isValidObjectId(req.params.id)) throw new ApiError(400, 'Invalid bus ID');
+  if (typeof req.body.isAvailable !== 'boolean') throw new ApiError(400, 'isAvailable must be boolean');
   const bus = await Bus.findById(req.params.id).select("-amenities -capacity");
 
   if (bus) {
@@ -263,7 +334,8 @@ const updateSeatAvailability = asyncHandler(async (req, res) => {
 });
 
 const getBusesByLocation = asyncHandler(async (req, res) => {
-  const { startLocationName, endLocationName } = req.query;
+  const startLocationName = cleanText(req.query.startLocationName, 100);
+  const endLocationName = cleanText(req.query.endLocationName, 100);
 
   if (!startLocationName || !endLocationName) {
     throw new ApiError(400, "startLocationName and endLocationName are required");
@@ -271,8 +343,8 @@ const getBusesByLocation = asyncHandler(async (req, res) => {
 
   // Find the Route document
   const route = await Route.findOne({
-    startLocation: { $regex: `^${startLocationName}$`, $options: "i" },
-    endLocation: { $regex: `^${endLocationName}$`, $options: "i" },
+    startLocation: { $regex: `^${escapeRegex(startLocationName)}$`, $options: "i" },
+    endLocation: { $regex: `^${escapeRegex(endLocationName)}$`, $options: "i" },
   });
 
   if (!route) {
@@ -285,7 +357,7 @@ const getBusesByLocation = asyncHandler(async (req, res) => {
   }).populate({
     path: "startLocation endLocation",
     select: "startLocation endLocation totalDistance totalDuration",
-  });
+  }).lean();
 
   res.json(new ApiResponse(200, "Buses retrieved successfully", buses));
 });

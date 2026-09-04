@@ -2,33 +2,48 @@ import asyncHandler from '../utils/Asynchandler.js';
 import Route from '../models/Routes.model.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import mongoose from 'mongoose';
+import Bus from '../models/Bus.model.js';
+import { cleanText, escapeRegex, isValidObjectId, parseDate } from '../utils/validation.js';
+import { startOfUtcDay } from '../utils/tripInventory.js';
+import { invalidateSearchCache } from '../utils/cache.js';
 
 
 const createRoute = asyncHandler(async (req, res) => {
-  const { startLocation, endLocation, date, totalDistance, totalDuration } = req.body;
+  const start = cleanText(req.body.startLocation, 100);
+  const end = cleanText(req.body.endLocation, 100);
+  const parsedDate = req.body.date ? parseDate(req.body.date) : null;
+  const date = parsedDate ? startOfUtcDay(parsedDate) : null;
+  const totalDistance = req.body.totalDistance !== undefined && req.body.totalDistance !== "" ? Number(req.body.totalDistance) : null;
+  const totalDuration = req.body.totalDuration !== undefined && req.body.totalDuration !== "" ? Number(req.body.totalDuration) : null;
 
-  if (!startLocation || !endLocation || !date || !totalDistance || !totalDuration) {
-    throw new ApiError(400, "Start location, end location, date, totalDistance, and totalDuration are required");
+  if (!start || !end || !date) {
+    throw new ApiError(400, "Start location, end location, and date are required");
+  }
+
+  if (!Number.isFinite(totalDistance) || totalDistance <= 0 || !Number.isFinite(totalDuration) || totalDuration <= 0) {
+    throw new ApiError(400, "Valid positive totalDistance and totalDuration are required");
   }
 
   const routeExists = await Route.findOne({
-    startLocation: { $regex: `^${startLocation}$`, $options: "i" },
-    endLocation: { $regex: `^${endLocation}$`, $options: "i" },
-    date: new Date(date),
+    startLocation: { $regex: `^${escapeRegex(start)}$`, $options: "i" },
+    endLocation: { $regex: `^${escapeRegex(end)}$`, $options: "i" },
+    date,
   });
 
   if (routeExists) {
-    throw new ApiError(400, "Route with this start, end location, and date already exists");
+    throw new ApiError(409, "Route with this start, end location, and date already exists");
   }
 
   const route = await Route.create({
-    startLocation,
-    endLocation,
-    date: new Date(date),
-    totalDistance: Number(totalDistance),
-    totalDuration: Number(totalDuration),
+    startLocation: start,
+    endLocation: end,
+    date,
+    totalDistance,
+    totalDuration,
     buses: [],
   });
+  await invalidateSearchCache();
 
   res.status(201).json(
     new ApiResponse(201, "Route created successfully", route)
@@ -37,6 +52,7 @@ const createRoute = asyncHandler(async (req, res) => {
 
 
 const getroutes = asyncHandler(async (req, res) => {
+  res.set("Cache-Control", "private, no-cache");
   const routes = await Route.find({})
     .populate({
       path: "buses",
@@ -49,8 +65,17 @@ const getroutes = asyncHandler(async (req, res) => {
 });
 
 const updateRoute = asyncHandler(async (req, res) => {
-  const { startLocation, endLocation, date, totalDistance, totalDuration } = req.body;
+  const startLocation = req.body.startLocation === undefined ? undefined : cleanText(req.body.startLocation, 100);
+  const endLocation = req.body.endLocation === undefined ? undefined : cleanText(req.body.endLocation, 100);
+  const date = req.body.date === undefined ? undefined : parseDate(req.body.date);
+  const totalDistance = req.body.totalDistance === undefined ? undefined : Number(req.body.totalDistance);
+  const totalDuration = req.body.totalDuration === undefined ? undefined : Number(req.body.totalDuration);
   const routeId = req.params.id;
+
+  if (!isValidObjectId(routeId)) throw new ApiError(400, "Invalid route ID");
+  if (req.body.date !== undefined && !date) throw new ApiError(400, "Invalid route date");
+  if (totalDistance !== undefined && (!Number.isFinite(totalDistance) || totalDistance <= 0)) throw new ApiError(400, "Distance must be a positive number");
+  if (totalDuration !== undefined && (!Number.isFinite(totalDuration) || totalDuration <= 0)) throw new ApiError(400, "Duration must be a positive number");
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -64,12 +89,12 @@ const updateRoute = asyncHandler(async (req, res) => {
     if (startLocation || endLocation || date) {
       const newStart = startLocation || route.startLocation;
       const newEnd = endLocation || route.endLocation;
-      const newDate = date ? new Date(date) : route.date;
+      const newDate = date ? startOfUtcDay(date) : route.date;
 
       const duplicateRoute = await Route.findOne(
         {
-          startLocation: { $regex: `^${newStart}$`, $options: "i" },
-          endLocation: { $regex: `^${newEnd}$`, $options: "i" },
+          startLocation: { $regex: `^${escapeRegex(newStart)}$`, $options: "i" },
+          endLocation: { $regex: `^${escapeRegex(newEnd)}$`, $options: "i" },
           date: newDate,
           _id: { $ne: route._id },
         },
@@ -78,7 +103,7 @@ const updateRoute = asyncHandler(async (req, res) => {
       );
 
       if (duplicateRoute) {
-        throw new ApiError(400, "Route with this start, end location, and date already exists");
+        throw new ApiError(409, "Route with this start, end location, and date already exists");
       }
 
       route.startLocation = newStart;
@@ -92,6 +117,7 @@ const updateRoute = asyncHandler(async (req, res) => {
     const updatedRoute = await route.save({ session });
 
     await session.commitTransaction();
+    await invalidateSearchCache();
 
     res.json(
       new ApiResponse(200, "Route updated successfully", {
@@ -114,6 +140,7 @@ const updateRoute = asyncHandler(async (req, res) => {
 
 const deleteRoute = asyncHandler(async (req, res) => {
   const routeId = req.params.id;
+  if (!isValidObjectId(routeId)) throw new ApiError(400, "Invalid route ID");
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -134,6 +161,7 @@ const deleteRoute = asyncHandler(async (req, res) => {
 
     await Route.findByIdAndDelete(routeId).session(session);
     await session.commitTransaction();
+    await invalidateSearchCache();
 
     res.json(new ApiResponse(200, "Route removed successfully", { _id: routeId }));
   } catch (error) {
@@ -146,12 +174,20 @@ const deleteRoute = asyncHandler(async (req, res) => {
 
 
 const searchRoutes = asyncHandler(async (req, res) => {
+  res.set("Cache-Control", "private, no-cache");
   const { startLocation, endLocation, date } = req.query;
 
   let query = {};
-  if (startLocation) query.startLocation = { $regex: `^${startLocation}$`, $options: "i" };
-  if (endLocation) query.endLocation = { $regex: `^${endLocation}$`, $options: "i" };
-  if (date) query.date = new Date(date);
+  if (startLocation) query.startLocation = { $regex: `^${escapeRegex(cleanText(startLocation, 100))}$`, $options: "i" };
+  if (endLocation) query.endLocation = { $regex: `^${escapeRegex(cleanText(endLocation, 100))}$`, $options: "i" };
+  if (date) {
+    const parsedDate = parseDate(date);
+    if (!parsedDate) throw new ApiError(400, "Invalid route date");
+    const dayStart = startOfUtcDay(parsedDate);
+    const nextDate = new Date(dayStart);
+    nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+    query.date = { $gte: dayStart, $lt: nextDate };
+  }
 
   if (Object.keys(query).length === 0) {
     throw new ApiError(400, "Please provide startLocation, endLocation, or date to search");
@@ -160,15 +196,13 @@ const searchRoutes = asyncHandler(async (req, res) => {
   const routes = await Route.find(query)
     .populate({
       path: "buses",
-      select: "busNumber capacity amenities Seats startLocation endLocation",
+      select: "busNumber capacity amenities Seats.price startLocation endLocation",
     })
     .select("startLocation endLocation date totalDistance totalDuration buses")
     .lean();
 
   res.json(new ApiResponse(200, "Routes found", routes));
 });
-
-
 
 export {
   createRoute,

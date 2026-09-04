@@ -1,9 +1,9 @@
-import axios from 'axios';
+import axios from './apiClient';
 
 const API_BASE = import.meta.env.VITE_BASE_URL;
 
-export const register = (FormData) =>
-    axios.post(`${API_BASE}/users/register`,FormData,{
+export const register = (data) =>
+    axios.post(`${API_BASE}/users/register`, data,{
       headers:{
         'Content-Type': 'application/json'
       },
@@ -17,7 +17,7 @@ export const login = (data) =>
     });
 
 export const logout = () =>
-    axios.get(`${API_BASE}/users/logout`, {
+    axios.post(`${API_BASE}/users/logout`, {}, {
         withCredentials: true
     });
 

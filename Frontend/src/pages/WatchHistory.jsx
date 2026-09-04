@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, History, MapPin, Calendar, Users, Receipt } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getPayments } from "../services/payment.service";
+import { TableSkeleton } from "../components/Skeleton";
 
 export default function WatchHistory() {
   const [items, setItems] = useState([]);
@@ -54,10 +55,7 @@ export default function WatchHistory() {
           </h2>
 
           {loading && (
-            <div className="text-center py-12">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-indigo-400 border-t-transparent"></div>
-              <p className="text-white/80 text-lg mt-4">Loading your booking history...</p>
-            </div>
+            <TableSkeleton />
           )}
 
           {error && (
@@ -99,7 +97,7 @@ export default function WatchHistory() {
                       <div>
                         <h3 className="text-lg font-semibold text-white">{p.bus?.busNumber || "Unknown Bus"}</h3>
                         <p className="text-sm text-white/60">
-                          Payment ID: {p._id}
+                          Booking ID: {p.bookingId || p.transactionReference}
                         </p>
                       </div>
                       <div className="text-sm text-white/80">

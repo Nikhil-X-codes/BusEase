@@ -1,15 +1,22 @@
 import { useState } from "react";
 import { Menu, User, History, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { logout } from "../services/auth.service";
+import { useAuth } from "../context/Authcontext";
 
 export default function Header() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { logout: clearAuth, user } = useAuth();
 
-  const handleLogout = () => {
-    localStorage.removeItem("authToken"); 
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      clearAuth();
+    }
     setMenuOpen(false);
-    navigate("/"); 
+    navigate("/auth");
   };
 
   return (
@@ -22,7 +29,18 @@ export default function Header() {
       </h1>
 
       <div className="relative">
-        <button
+              {['admin', 'superadmin'].includes(user?.role) && <button
+              onClick={() => {
+                navigate("/admin");
+                setMenuOpen(false);
+              }}
+              className="w-full flex items-center space-x-2 px-5 py-3 text-white hover:bg-white/20 transition-all duration-200 cursor-pointer"
+              aria-label="Go to Admin Dashboard"
+            >
+              <History className="w-5 h-5 text-cyan-300" />
+              <span className="text-sm font-medium">Admin Dashboard</span>
+            </button>}
+              <button
           onClick={() => setMenuOpen(!menuOpen)}
           className="flex items-center space-x-2 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full px-5 py-2 text-white hover:bg-white/30 transition-all duration-300"
           aria-label={menuOpen ? "Close menu" : "Open menu"}

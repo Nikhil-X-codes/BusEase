@@ -16,9 +16,45 @@ const userschema=new Schema({
     index:true,
     lowercase: true
   },
+  phone: {
+    type: String,
+    trim: true,
+    maxlength: 20,
+    index: true
+  },
     password: {
     type: String,
     required: [true, 'Password is required']
+  },
+    role: {
+        type: String,
+        enum: ['user', 'admin', 'superadmin'],
+        default: 'user',
+        index: true
+    },
+  permissions: {
+    type: [String],
+    default: []
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+    index: true
+  },
+  lastLoginAt: Date,
+  lastActivityAt: Date,
+  forcePasswordChange: {
+    type: Boolean,
+    default: false
+  },
+  createdBy: {
+    type: Schema.Types.ObjectId,
+    ref: "User"
+  },
+  passwordHistory: {
+    type: [String],
+    select: false,
+    default: []
   },
   refreshToken: {
     type: String,
@@ -39,9 +75,6 @@ const userschema=new Schema({
     timestamps: true,
 });
 
-// Compound index for email lookups (most common query)
-userschema.index({ email: 1 }, { unique: true });
-
 // Index for OTP-based password reset queries
 userschema.index({ resetPasswordOTPExpires: 1 }, { sparse: true });
 userschema.index({ email: 1, resetPasswordOTP: 1, resetPasswordOTPExpires: 1 }, { sparse: true });
@@ -60,7 +93,7 @@ userschema.methods.isPasswordmatch= async function(password){
 
 userschema.methods.generateAccessToken = function () {
     return jwt.sign(
-        { id: this._id, username: this.username },
+        { id: this._id, username: this.username, role: this.role, permissions: this.permissions },
         process.env.ACCESS_TOKEN_SECRET,
         { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || '1h' }
     );
@@ -68,7 +101,7 @@ userschema.methods.generateAccessToken = function () {
 
 userschema.methods.generateRefreshToken = function () {
     return jwt.sign(
-        { id: this._id, username: this.username },
+        { id: this._id, username: this.username, role: this.role, permissions: this.permissions },
         process.env.REFRESH_TOKEN_SECRET,
         { expiresIn: process.env.REFRESH_TOKEN_EXPIRY || '10d' }
     );

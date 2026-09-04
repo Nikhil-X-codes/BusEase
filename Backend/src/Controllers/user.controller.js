@@ -7,18 +7,32 @@ import mongoose from "mongoose";
 import User from "../models/User.model.js";
 import { generateOTP,
     sendOTPEmail,
+    sendWelcomeEmail,
 } 
     
     from "../utils/Nodemailer.js";
+import { cleanText, isStrongPassword, isValidEmail } from "../utils/validation.js";
+import { clearFailedLogins, isAccountLocked, recordFailedLogin } from "../middlewares/rateLimit.middleware.js";
 
 
 const registeruser = asynchandler(async (req,res) => {
     const startTimeNs = process.hrtime.bigint();
 
-    const { username, email, password } = req.body;
+    const username = cleanText(req.body.username, 60);
+    const email = cleanText(req.body.email, 254).toLowerCase();
+    const { password } = req.body;
 
     if (!username || !email || !password) {
-        return res.status(400).json({ message: "All fields are required" });
+        throw new ApiError(400, "Username, email, and password are required");
+    }
+    if (!isValidEmail(email)) {
+        throw new ApiError(400, "Please provide a valid email address");
+    }
+    if (isAccountLocked(email)) {
+        throw new ApiError(429, "Account temporarily locked after repeated failed attempts. Please try again later.");
+    }
+    if (!isStrongPassword(password)) {
+        throw new ApiError(400, "Password must be at least 8 characters and include uppercase, lowercase, and a number");
     }
 
     const findStart = process.hrtime.bigint();
@@ -42,21 +56,35 @@ const registeruser = asynchandler(async (req,res) => {
 
     const totalMs = Number(process.hrtime.bigint() - startTimeNs) / 1e6;
     console.log(`[AUTH][REGISTER] email=${email} findMs=${findMs.toFixed(1)} createMs=${createMs.toFixed(1)} totalMs=${totalMs.toFixed(1)}`);
-    return res.status(201).json(new ApiResponse(201, "User registered successfully", newUser));
+    const safeUser = newUser.toObject();
+    delete safeUser.password;
+    delete safeUser.refreshToken;
+    delete safeUser.resetPasswordOTP;
+    delete safeUser.resetPasswordOTPExpires;
+    await sendWelcomeEmail(email, username).catch((error) => console.error("[EMAIL] welcome email failed:", error.message));
+    return res.status(201).json(new ApiResponse(201, "User registered successfully", safeUser));
 })
 
 const loginuser = asynchandler(async (req, res) => {                                   
     const startTimeNs = process.hrtime.bigint();
-    const { email, password } = req.body;
+    const email = cleanText(req.body.email, 254).toLowerCase();
+    const { password } = req.body;
     if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
+        throw new ApiError(400, "Email and password are required");
+    }
+    if (!isValidEmail(email)) {
+        throw new ApiError(400, "Please provide a valid email address");
     }
     const findStart = process.hrtime.bigint();
     const existinguser = await User.findOne({ email });
     const findMs = Number(process.hrtime.bigint() - findStart) / 1e6;
 
     if (!existinguser) {
-        return registeruser(req, res); 
+        recordFailedLogin(email);
+        throw new ApiError(401, "Invalid email or password");
+    }
+    if (existinguser.isActive === false) {
+        throw new ApiError(401, "Account is inactive");
     }
 
     const bcryptStart = process.hrtime.bigint();
@@ -64,8 +92,13 @@ const loginuser = asynchandler(async (req, res) => {
     const bcryptMs = Number(process.hrtime.bigint() - bcryptStart) / 1e6;
 
     if (!isPasswordValid) {
+        recordFailedLogin(email);
         throw new ApiError(401, "Invalid email or password");
     }
+    clearFailedLogins(email);
+    existinguser.lastLoginAt = new Date();
+    existinguser.lastActivityAt = new Date();
+    await existinguser.save({ validateBeforeSave: false });
 
     const tokenStart = process.hrtime.bigint();
     const {accessToken,refreshToken } = await generateAccessAndRefreshTokens(existinguser._id);
@@ -75,6 +108,8 @@ const loginuser = asynchandler(async (req, res) => {
     const loggedInUser = existinguser.toObject();
     delete loggedInUser.password;
     delete loggedInUser.refreshToken;
+    delete loggedInUser.resetPasswordOTP;
+    delete loggedInUser.resetPasswordOTPExpires;
     const profileMs = Number(process.hrtime.bigint() - profileStart) / 1e6;
 
     const options = {
@@ -95,8 +130,6 @@ const loginuser = asynchandler(async (req, res) => {
                  "User logged in successfully",
                 {
                     user: loggedInUser,
-                    accessToken,
-                    refreshToken
                 },
                
             )
@@ -133,7 +166,10 @@ const changepassword = asynchandler(async (req, res) => {
     const { oldPassword, newPassword } = req.body;
 
     if (!oldPassword || !newPassword) {
-        return res.status(400).json({ message: "Old password and new password are required" });
+        throw new ApiError(400, "Old password and new password are required");
+    }
+    if (!isStrongPassword(newPassword)) {
+        throw new ApiError(400, "Password must be at least 8 characters and include uppercase, lowercase, and a number");
     }
 
     const user = await User.findById(req.user?._id);
@@ -157,7 +193,7 @@ const changepassword = asynchandler(async (req, res) => {
 });
 
 const getuserProfile = asynchandler(async (req, res) => {
-    const user = await User.findById(req.user?._id).select("-password -refreshToken");
+    const user = await User.findById(req.user?._id).select("-password -refreshToken -resetPasswordOTP -resetPasswordOTPExpires");
 
     if (!user) {
         throw new ApiError(404, "User not found");
@@ -170,10 +206,14 @@ const getuserProfile = asynchandler(async (req, res) => {
 
 
 const updateProfile = asynchandler(async (req, res) => {
-    const { username, email } = req.body;
+    const username = req.body.username === undefined ? undefined : cleanText(req.body.username, 60);
+    const email = req.body.email === undefined ? undefined : cleanText(req.body.email, 254).toLowerCase();
 
     if (!username && !email) {
-        return res.status(400).json({ message: "At least one field is required to update" });
+        throw new ApiError(400, "At least one valid field is required to update");
+    }
+    if (email && !isValidEmail(email)) {
+        throw new ApiError(400, "Please provide a valid email address");
     }
 
     const updateFields = {};
@@ -198,7 +238,7 @@ const updateProfile = asynchandler(async (req, res) => {
             new: true,
             runValidators: true
         }
-    ).select("-password -refreshToken");
+    ).select("-password -refreshToken -resetPasswordOTP -resetPasswordOTPExpires");
 
     if (!updatedUser) {
         throw new ApiError(500, "Failed to update user profile");
@@ -256,14 +296,15 @@ const refreshAccessToken = asynchandler(async (req, res, next) => {
 
     const cookieOptions = {
       httpOnly: true,
-      secure: true
+            secure: true,
+            sameSite: 'none'
     };
 
     return res
       .status(200)
       .cookie("accessToken", newAccessToken, cookieOptions)
       .cookie("refreshToken", newRefreshToken, cookieOptions)
-      .json(new ApiResponse(200,"Tokens refreshed successfully", { accessToken: newAccessToken, refreshToken: newRefreshToken }));
+    .json(new ApiResponse(200,"Tokens refreshed successfully"));
   } 
   
   catch (error) {
@@ -272,16 +313,21 @@ const refreshAccessToken = asynchandler(async (req, res, next) => {
 
 
 const sendPasswordResetOTP = asynchandler(async (req, res) => {
-    const { email } = req.body;
+    const email = cleanText(req.body.email, 254).toLowerCase();
 
     if (!email) {
-        return res.status(400).json({ message: "Email is required" });
+        throw new ApiError(400, "Email is required");
+    }
+    if (!isValidEmail(email)) {
+        throw new ApiError(400, "Please provide a valid email address");
     }
 
     const user = await User.findOne({ email }).select('_id email resetPasswordOTP resetPasswordOTPExpires');
     
     if (!user) {
-        throw new ApiError(404, "User with this email does not exist");
+        return res
+            .status(200)
+            .json(new ApiResponse(200, "If the account exists, a password reset OTP has been sent"));
     }
 
     const otp = generateOTP();
@@ -307,10 +353,18 @@ const sendPasswordResetOTP = asynchandler(async (req, res) => {
 
 
 const resetPasswordWithOTP = asynchandler(async (req, res) => {
-    const { email, otp, newPassword } = req.body;
+    const email = cleanText(req.body.email, 254).toLowerCase();
+    const otp = cleanText(req.body.otp, 6);
+    const { newPassword } = req.body;
 
     if (!email || !otp || !newPassword) {
-        return res.status(400).json({ message: "Email, OTP and new password are required" });
+        throw new ApiError(400, "Email, OTP, and new password are required");
+    }
+    if (!isValidEmail(email) || !/^\d{6}$/.test(otp)) {
+        throw new ApiError(400, "Please provide a valid email and 6-digit OTP");
+    }
+    if (!isStrongPassword(newPassword)) {
+        throw new ApiError(400, "Password must be at least 8 characters and include uppercase, lowercase, and a number");
     }
 
     const user = await User.findOne({ 

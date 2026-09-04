@@ -1,14 +1,20 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/Authcontext';
-import { useEffect } from 'react';
-import Auth from './pages/auth';
-import ForgetPassword from './components/Forgetpassword';
-import Home from './pages/Home';
-import SeatSelection from './pages/Seatselection';
-import Payment from './pages/payment';
-import PaymentSuccess from './pages/paymentsuccess';
-import Profile from './pages/Profile';
-import WatchHistory from './pages/WatchHistory';
+import { lazy, Suspense, useEffect } from 'react';
+import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
+import ToastProvider from './components/ToastProvider';
+
+const Auth = lazy(() => import('./pages/auth'));
+const ForgetPassword = lazy(() => import('./components/Forgetpassword'));
+const Home = lazy(() => import('./pages/Home'));
+const SeatSelection = lazy(() => import('./pages/Seatselection'));
+const Payment = lazy(() => import('./pages/payment'));
+const PaymentSuccess = lazy(() => import('./pages/paymentsuccess'));
+const Profile = lazy(() => import('./pages/Profile'));
+const WatchHistory = lazy(() => import('./pages/WatchHistory'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminUsers = lazy(() => import('./pages/AdminUsers'));
 
 const App = () => {
   useEffect(() => {
@@ -30,42 +36,33 @@ const App = () => {
   return (
     <Router>
       <AuthProvider>
+        <ToastProvider>
+        <ErrorBoundary>
+        <Suspense fallback={<main className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Loading...</main>}>
         
         <Routes>
-          <Route path="/" element={<Auth />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/forget-password" element={<ForgetPassword />} />
+          <Route path="/" element={<ProtectedRoute guestOnly><Auth /></ProtectedRoute>} />
+          <Route path="/auth" element={<ProtectedRoute guestOnly><Auth /></ProtectedRoute>} />
+          <Route path="/forget-password" element={<ProtectedRoute guestOnly><ForgetPassword /></ProtectedRoute>} />
 
           <Route path='/home'
           element = {
               <Home/>
           } />
 
-          <Route path='/buses/:busId/seats'
-          element = {
-              <SeatSelection/>
-          } />
+            <Route path='/buses/:busId/seats' element={<ProtectedRoute requireAuth><SeatSelection/></ProtectedRoute>} />
 
-          <Route path='/profile'
-          element = {
-              <Profile/>
-          } />
+            <Route path='/profile' element={<ProtectedRoute requireAuth><Profile/></ProtectedRoute>} />
 
-          <Route path='/history'
-          element = {
-              <WatchHistory/>
-          } />
+            <Route path='/history' element={<ProtectedRoute requireAuth><WatchHistory/></ProtectedRoute>} />
+
+            <Route path='/admin' element={<ProtectedRoute requireAuth requireAdmin><AdminDashboard /></ProtectedRoute>} />
+            <Route path='/admin/users' element={<ProtectedRoute requireAuth requireAdmin><AdminUsers /></ProtectedRoute>} />
                     
                     
-          <Route path='/payment'
-          element = {
-              <Payment/>
-          } />
+            <Route path='/payment' element={<ProtectedRoute requireAuth><Payment/></ProtectedRoute>} />
 
-          <Route path='/success'
-          element = {
-             <PaymentSuccess/>
-          } />
+           <Route path='/success' element={<ProtectedRoute requireAuth><PaymentSuccess/></ProtectedRoute>} />
 
 
 
@@ -74,6 +71,9 @@ const App = () => {
 
 
         </Routes>
+        </Suspense>
+        </ErrorBoundary>
+        </ToastProvider>
       </AuthProvider>
     </Router>
   );

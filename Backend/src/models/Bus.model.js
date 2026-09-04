@@ -40,6 +40,11 @@ const BusSchema = new Schema(
     amenities: {
       type: [String],
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
     Seats: [SeatSchema],
     startLocation: {
       type: Schema.Types.ObjectId,
@@ -66,6 +71,7 @@ BusSchema.pre("save", function (next) {
   this.capacity = this.Seats.length;
   next();
 });
+BusSchema.index({ startLocation: 1, endLocation: 1 });
 
 const Bus = mongoose.model("Bus", BusSchema);
 export default Bus;

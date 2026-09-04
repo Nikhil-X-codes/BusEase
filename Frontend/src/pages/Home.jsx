@@ -6,11 +6,12 @@ import { searchRoute, getRoutes } from "../services/route.service";
 import { useNavigate } from "react-router-dom";
 import { Bus, Armchair,Coins ,Calendar } from "lucide-react";
 import Header from "../components/Header"
+import { BusResultsSkeleton } from "../components/Skeleton";
 
 const Home = () => {
   const [from, setFrom] = useState(null);
   const [to, setTo] = useState(null);
-  const [departureDate, setDepartureDate] = useState(null);
+  const [departureDate, setDepartureDate] = useState(() => new Date());
   const [buses, setBuses] = useState([]);
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -33,9 +34,10 @@ const Home = () => {
         ];
         const routeOptions = uniqueLocations.map((loc) => ({ value: loc, label: loc }));
         setRoutes(routeOptions);
+        setError(null);
       } catch (err) {
         console.error("Error fetching routes:", err?.message || err);
-        setError(err?.message || "Failed to load routes");
+        setError(err?.response?.data?.message || err?.message || "Failed to load routes");
       }
     };
     fetchRoutes();
@@ -43,7 +45,7 @@ const Home = () => {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!from?.value || !to?.value || !departureDate) {
+    if (!from?.value || !to?.value || !(departureDate instanceof Date) || Number.isNaN(departureDate.getTime())) {
       setError("Please select departure city, destination city, and date");
       console.warn("Validation failed:", { from, to, departureDate });
       return;
@@ -52,31 +54,30 @@ const Home = () => {
     setError(null);
     try {
       const response = await searchRoute({
-        startLocation: from.value,
-        endLocation: to.value,
+        origin: from.value,
+        destination: to.value,
+        date: new Date(Date.UTC(
+          departureDate.getFullYear(),
+          departureDate.getMonth(),
+          departureDate.getDate()
+        )).toISOString(),
       });
       const apiData = response?.data?.data;
       const routesArray = Array.isArray(apiData) ? apiData : [];
       const busList = Array.isArray(routesArray)
-        ? routesArray.flatMap((route) =>
-            Array.isArray(route.buses)
-              ? route.buses.map((bus) => ({
-                  id: bus._id || "",
-                  name: bus.busNumber || "Unknown Bus",
-                  distance: `${route.totalDistance || 0} km`,
-                  from: route.startLocation || "Unknown",
-                  to: route.endLocation || "Unknown",
-                  duration: route.totalDuration
-                    ? `${route.totalDuration}h`
-                    : "N/A",
-price: bus.Seats && Array.isArray(bus.Seats) && bus.Seats.length > 0
-  ? Math.min(...bus.Seats.map(seat => seat.price || 0))
-  : 0,
-                  amenities: Array.isArray(bus.amenities) ? bus.amenities : [],
-                  routeId: route._id || "",
-                }))
-              : []
-          )
+        ? routesArray.map((bus) => ({
+            id: bus.id || "",
+            name: bus.name || "Unknown Bus",
+            distance: `${bus.distance || 0} km`,
+            from: bus.origin || "Unknown",
+            to: bus.destination || "Unknown",
+            duration: bus.duration ? `${bus.duration}h` : "N/A",
+            price: bus.price || 0,
+            amenities: Array.isArray(bus.amenities) ? bus.amenities : [],
+            routeId: bus.routeId || "",
+            availableSeats: bus.availableSeats,
+            totalSeats: bus.totalSeats,
+          }))
         : [];
       setBuses(busList);
       if (busList.length === 0) {
@@ -91,7 +92,8 @@ price: bus.Seats && Array.isArray(bus.Seats) && bus.Seats.length > 0
   };
 
  const handleBookNow = (busId, routeId) => {
-  navigate(`/buses/${busId}/seats?routeId=${routeId}`, {
+  const dateStr = departureDate ? new Date(departureDate).toISOString() : new Date().toISOString();
+  navigate(`/buses/${busId}/seats?routeId=${routeId}&date=${encodeURIComponent(dateStr)}`, {
     state: { selectedDate: departureDate }
   });
 };
@@ -264,20 +266,7 @@ price: bus.Seats && Array.isArray(bus.Seats) && bus.Seats.length > 0
           Available Buses <span className="text-gray-300 text-sm">({buses.length} found)</span>
         </h3>
         {loading && (
-          <div className="text-center py-12">
-            <svg
-              className="animate-spin h-8 w-8 text-indigo-400 mx-auto"
-              viewBox="0 0 24 24"
-            >
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-            <p className="text-white text-lg mt-4">Loading buses...</p>
-          </div>
+          <BusResultsSkeleton />
         )}
 
         {buses.map((bus) => (
@@ -293,6 +282,7 @@ price: bus.Seats && Array.isArray(bus.Seats) && bus.Seats.length > 0
                   <p><span className="font-medium">Distance:</span> {bus.distance}</p>
                   <p><span className="font-medium">Duration:</span> {bus.duration}</p>
                   <p><span className="font-medium">Starting Price:</span> ₹{bus.price.toLocaleString()}</p>
+                  <p><span className="font-medium">Seats:</span> {bus.availableSeats} available of {bus.totalSeats}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-3">
                   {bus.amenities.length > 0 ? (

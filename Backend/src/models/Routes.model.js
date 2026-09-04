@@ -17,6 +17,11 @@ const RouteSchema = new Schema({
     type: String,
     required: true,
   },
+  isActive: {
+    type: Boolean,
+    default: true,
+    index: true,
+  },
   date: {
     type: Date,
     default: Date.now,

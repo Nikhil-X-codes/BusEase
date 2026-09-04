@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "./apiClient";
 
 const API_BASE = import.meta.env.VITE_BASE_URL;
 
@@ -22,6 +22,35 @@ export const getBusById = (id) =>
     headers: { "Content-Type": "application/json" },
     withCredentials: true,
   });
+
+export const getTripInventory = (busId, date) =>
+  axios.get(`${API_BASE}/book/${busId}/inventory`, {
+    params: { date },
+    headers: { "Content-Type": "application/json" },
+    withCredentials: true,
+  });
+
+// Hold seats temporarily during selection
+export const holdTripSeats = (busId, date, seatNumbers) =>
+  axios.post(
+    `${API_BASE}/book/${busId}/inventory/hold`,
+    { date, seatNumbers },
+    {
+      headers: { "Content-Type": "application/json" },
+      withCredentials: true,
+    }
+  );
+
+// Release seat hold
+export const releaseTripSeats = (busId, date, seatNumbers) =>
+  axios.post(
+    `${API_BASE}/book/${busId}/inventory/release`,
+    { date, seatNumbers },
+    {
+      headers: { "Content-Type": "application/json" },
+      withCredentials: true,
+    }
+  );
 
 // ✅ Update a bus (admin only)
 export const updateBus = (id, data) =>

@@ -26,17 +26,24 @@ const PaymentSchema = new Schema(
 			type: Number,
 			required: true,
 		},
-		cardDetails: {
-			cardNumber: { type: String, required: true },
-			cardHolderName: { type: String, required: true },
-			expiryDate: { type: String, required: true },
-			cvv: { type: String, required: true },
-		},
+		transactionReference: { type: String, required: true, unique: true, index: true },
+		bookingId: { type: String, required: true, unique: true, index: true },
+		status: { type: String, enum: ["confirmed", "cancelled", "refunded"], default: "confirmed" },
+		cancelledAt: { type: Date },
+		cancellationReason: { type: String, trim: true, maxlength: 500 },
+		refundAmount: { type: Number, min: 0 },
+		refundStatus: { type: String, enum: ["not_requested", "simulated", "failed"], default: "not_requested" },
 	},
 	{
 		timestamps: true,
 	}
 );
+
+PaymentSchema.index({ user: 1, bus: 1, selectedDate: 1 });
+PaymentSchema.index({ user: 1, createdAt: -1 });
+PaymentSchema.index({ createdAt: -1 });
+PaymentSchema.index({ status: 1, selectedDate: 1 });
+PaymentSchema.index({ bus: 1, selectedDate: 1 });
 
 const Payment = mongoose.model("Payment", PaymentSchema);
 export default Payment;

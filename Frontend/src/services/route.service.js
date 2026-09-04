@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "./apiClient";
 
 const API_BASE = import.meta.env.VITE_BASE_URL;
 
@@ -32,7 +32,7 @@ export const deleteRoute = (id) =>
 
 // ✅ Search routes (protected)
 export const searchRoute = (params) =>
-  axios.get(`${API_BASE}/routes/search`, {
+  axios.get(`${API_BASE}/buses/search`, {
     params, // e.g. { from: "Mumbai", to: "Delhi" }
     headers: { "Content-Type": "application/json" },
     withCredentials: true,

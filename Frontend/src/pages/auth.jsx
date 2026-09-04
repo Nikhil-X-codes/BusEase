@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { register,login } from '../services/auth.service';
+import { useAuth } from '../context/Authcontext';
 
 const Auth = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const { login: saveLogin } = useAuth();
   const [isSignUp, setIsSignUp] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 const [error, setError] = useState('');
@@ -57,24 +60,16 @@ const handleSubmit = async (e) => {
     try {
         if (isSignUp) {
             // Handle Register
-            const formDataObj = new FormData();
-            formDataObj.append('username', formData.username);
-            formDataObj.append('email', formData.email);
-            formDataObj.append('password', formData.password);
-            
-            const response = await register(formDataObj);
+            await register(formData);
             setIsSignUp(false);
         } else {
-            const formDataObj = new FormData();
-            formDataObj.append('email', formData.email);
-            formDataObj.append('password', formData.password);
-            
-            const response = await login(formDataObj);
-
-            navigate('/home'); 
+            const response = await login({ email: formData.email, password: formData.password });
+            saveLogin(response?.data?.data?.user);
+            const destination = location.state?.from || '/home';
+            navigate(destination, { replace: true });
         }
     } catch (error) {
-        console.error('Auth error:', error?.response?.data?.message || error.message);
+        setError(error?.response?.data?.message || error.message || 'Authentication failed');
     }
 };
 

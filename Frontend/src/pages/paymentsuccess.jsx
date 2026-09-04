@@ -1,28 +1,28 @@
 import { useEffect, useState } from "react";
-import { CheckCircle, Download, Home, Calendar, MapPin, Users, Bus, Armchair,Coins } from "lucide-react";
+import { CheckCircle, Home, Calendar, MapPin, Users, Bus, Armchair, Coins, FileText } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { getPaymentById } from "../services/payment.service";
+import { getPaymentById, downloadBackendTicketPdf } from "../services/payment.service";
 
 export default function PaymentSuccess() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [paymentData, setPaymentData] = useState(null);
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+  const [isDownloadingServerPdf, setIsDownloadingServerPdf] = useState(false);
+  const [pdfError, setPdfError] = useState(null);
   const location = useLocation();
   const { bus, routeId, selectedSeats, payment, selectedDate } = location.state || {};
 
   const capitalize = (str) =>
-  typeof str === "string" && str.length > 0
-    ? str.charAt(0).toUpperCase() + str.slice(1)
-    : str;
+    typeof str === "string" && str.length > 0
+      ? str.charAt(0).toUpperCase() + str.slice(1)
+      : str;
 
   const resolvedPayment = paymentData || payment || null;
 
   const bookingData = {
     busName: bus?.busNumber || resolvedPayment?.bus?.busNumber || "Unknown Bus",
-
-    bookingId: `BG${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
-    
+    bookingId: resolvedPayment?.bookingId || payment?.bookingId || "Pending",
     paymentId: resolvedPayment?._id || payment?._id || payment?.paymentId || `PAY${Math.random().toString(36).substr(2, 10).toUpperCase()}`,
     date: resolvedPayment?.selectedDate
       ? new Date(resolvedPayment.selectedDate).toDateString()
@@ -62,112 +62,26 @@ export default function PaymentSuccess() {
       }
     };
     loadPayment();
-  }, []);
+  }, [payment, location.state]);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSuccess(true), 500);
     return () => clearTimeout(timer);
   }, []);
 
-  const generatePDF = () => {
-    const pdfContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Bus Ticket - ${bookingData.bookingId}</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
-          .header { text-align: center; border-bottom: 2px solid #4F46E5; padding-bottom: 20px; margin-bottom: 30px; }
-          .logo { color: #4F46E5; font-size: 28px; font-weight: bold; }
-          .ticket-id { color: #666; margin-top: 10px; font-size: 14px; }
-          .section { margin: 20px 0; }
-          .section-title { font-weight: bold; color: #4F46E5; border-bottom: 1px solid #E5E7EB; padding-bottom: 8px; margin-bottom: 15px; font-size: 18px; }
-          .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-          .info-item { padding: 12px; background: #F9FAFB; border-radius: 8px; }
-          .info-label { font-weight: bold; color: #6B7280; font-size: 12px; text-transform: uppercase; }
-          .info-value { color: #111827; margin-top: 5px; font-size: 14px; }
-          .passenger-card { border: 1px solid #E5E7EB; border-radius: 8px; padding: 15px; margin: 10px 0; }
-          .total { background: #4F46E5; color: white; padding: 15px; border-radius: 8px; text-align: center; font-size: 18px; font-weight: bold; }
-          .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #E5E7EB; color: #6B7280; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="logo">🚌 BusEase</div>
-          <div class="ticket-id">Booking ID: ${bookingData.bookingId}</div>
-          <div class="ticket-id">Payment ID: ${bookingData.paymentId}</div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">Journey Details</div>
-          <div class="info-grid">
-            <div class="info-item">
-              <div class="info-label">Bus Operator</div>
-              <div class="info-value">${bookingData.busName}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Travel Date</div>
-              <div class="info-value">${bookingData.date}</div>
-            </div>
-
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">Passenger Details</div>
- 
-${bookingData.passengers
-  .map(
-    (passenger) => `
-  <div class="passenger-card">
-    <div class="info-grid">
-      <div class="info-item">
-        <div class="info-label">Name</div>
-        <div class="info-value">${passenger.name}</div>
-      </div>
-      <div class="info-item">
-        <div class="info-label">Gender</div>
-        <div class="info-value">${passenger.gender}</div>
-      </div>
-      <div class="info-item">
-        <div class="info-label">Seat Number</div>
-        <div class="info-value">${passenger.seat}</div>
-      </div>
-      <div class="info-item">
-        <div class="info-label">Seat Type</div>
-        <div class="info-value">${passenger.type}</div>
-      </div>
-    </div>
-  </div>
-`
-  )
-  .join("")}
-      
-        </div>
-
-        <div class="section">
-          <div class="total">Total Amount Paid: ₹${bookingData.totalAmount.toLocaleString()}</div>
-        </div>
-
-        <div class="footer">
-          <p>Thank you for choosing BusEase!</p>
-          <p>Please carry a valid ID proof while traveling.</p>
-          <p>Generated on: ${new Date().toLocaleString()}</p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob([pdfContent], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `BusTicket_${bookingData.bookingId}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const downloadServerTicket = async () => {
+    const targetId = resolvedPayment?._id || resolvedPayment?.bookingId;
+    if (!targetId || isDownloadingServerPdf) return;
+    setIsDownloadingServerPdf(true);
+    setPdfError(null);
+    try {
+      await downloadBackendTicketPdf(targetId, bookingData.bookingId);
+    } catch (error) {
+      console.error("[PDF] Backend ticket download failed:", error);
+      setPdfError("Could not download ticket PDF. Please try again.");
+    } finally {
+      setIsDownloadingServerPdf(false);
+    }
   };
 
   return (
@@ -212,8 +126,18 @@ ${bookingData.passengers
       <div className="relative z-10 max-w-4xl mx-auto px-4 md:px-6 pb-8">
         {!bus || !selectedSeats || selectedSeats.length === 0 ? (
           <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 md:p-8 shadow-xl text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">No Booking Data Available</h2>
-            <p className="text-white/80 text-lg mb-6">It seems there was an issue with your booking details.</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Booking Confirmed</h2>
+            <p className="text-white/80 text-lg mb-6">Your booking reference is {bookingData.bookingId}.</p>
+            {resolvedPayment?._id && (
+              <button
+                onClick={downloadServerTicket}
+                disabled={isDownloadingServerPdf}
+                className="inline-flex items-center space-x-2 bg-emerald-600 text-white py-3 px-6 rounded-lg font-semibold shadow-md hover:shadow-xl transition-all duration-300 mr-4"
+              >
+                <FileText className="w-5 h-5" />
+                <span>{isDownloadingServerPdf ? "Downloading..." : "Download Ticket PDF"}</span>
+              </button>
+            )}
             <Link
               to="/home"
               className="inline-flex items-center space-x-2 bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold shadow-md hover:shadow-xl transition-all duration-300"
@@ -243,6 +167,7 @@ ${bookingData.passengers
                 <span className="text-sm font-medium">Booking ID: {bookingData.bookingId}</span>
               </div>
             </div>
+            {pdfError && <p className="text-center text-red-300 mb-4">{pdfError}</p>}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {/* Journey Details */}
@@ -292,7 +217,7 @@ ${bookingData.passengers
                   </div>
                   <div className="flex justify-between">
                     <span>Payment Method</span>
-                    <span className="text-white font-medium">Credit Card</span>
+                    <span className="text-white font-medium">Simulated Payment</span>
                   </div>
                   <div className="flex justify-between border-t border-white/20 pt-3">
                     <span className="font-semibold">Total Amount</span>
@@ -310,40 +235,42 @@ ${bookingData.passengers
                 <Users className="w-5 h-5 mr-2" />
                 Passenger Details
               </h4>
-             <div className="space-y-4">
-  {bookingData.passengers.map((passenger, index) => (
-    <div key={index} className="bg-white/10 p-4 rounded-lg">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-        <div>
-          <span className="text-white/60">Name</span>
-          <div className="text-white font-medium">{passenger.name}</div>
-        </div>
-        <div>
-          <span className="text-white/60">Gender</span>
-          <div className="text-white font-medium">{passenger.gender}</div>
-        </div>
-        <div>
-          <span className="text-white/60">Seat No.</span>
-          <div className="text-white font-medium">{passenger.seat}</div>
-        </div>
-        <div>
-          <span className="text-white/60">Seat Type</span>
-          <div className="text-white font-medium">{passenger.type}</div>
-        </div>
-      </div>
-    </div>
-  ))}
-</div>
+              <div className="space-y-4">
+                {bookingData.passengers.map((passenger, index) => (
+                  <div key={index} className="bg-white/10 p-4 rounded-lg">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="text-white/60">Name</span>
+                        <div className="text-white font-medium">{passenger.name}</div>
+                      </div>
+                      <div>
+                        <span className="text-white/60">Gender</span>
+                        <div className="text-white font-medium">{passenger.gender}</div>
+                      </div>
+                      <div>
+                        <span className="text-white/60">Seat No.</span>
+                        <div className="text-white font-medium">{passenger.seat}</div>
+                      </div>
+                      <div>
+                        <span className="text-white/60">Seat Type</span>
+                        <div className="text-white font-medium">{passenger.type}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
-                onClick={generatePDF}
-                className="flex items-center justify-center space-x-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-3 px-6 rounded-lg font-semibold shadow-md hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                onClick={downloadServerTicket}
+                disabled={isDownloadingServerPdf || !resolvedPayment?._id}
+                aria-label="Download Official Ticket PDF"
+                className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-3 px-6 rounded-lg font-semibold shadow-md hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
               >
-                <Download className="w-5 h-5" />
-                <span>Download Ticket</span>
+                <FileText className="w-5 h-5" />
+                <span>{isDownloadingServerPdf ? "Downloading Ticket PDF..." : "Download Ticket PDF"}</span>
               </button>
               <Link
                 to="/home"
